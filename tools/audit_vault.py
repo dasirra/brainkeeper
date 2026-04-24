@@ -20,14 +20,22 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import re
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+
+import frontmatter
 
 
 CANONICAL_LAYERS: tuple[str, ...] = (
     "inbox", "journal", "projects", "areas", "brain", "archive",
 )
+REQUIRED_FRONTMATTER_FIELDS: tuple[str, ...] = (
+    "type", "status", "created", "tags",
+)
+_JD_PREFIX = re.compile(r"^\d+\s+")
 
 
 @dataclass
@@ -39,16 +47,152 @@ class Check:
     details: str
 
 
+def _iter_top_level_dirs(vault: Path) -> list[Path]:
+    return sorted(
+        p for p in vault.iterdir()
+        if p.is_dir() and not p.name.startswith(".")
+    )
+
+
+def _iter_markdown_files(vault: Path) -> list[Path]:
+    files = []
+    for p in vault.rglob("*.md"):
+        rel_parts = p.relative_to(vault).parts
+        if any(part.startswith(".") for part in rel_parts):
+            continue
+        files.append(p)
+    return sorted(files)
+
+
+def _map_to_canonical(dirname: str) -> str | None:
+    """Map a folder name to a canonical layer key, or None."""
+    stripped = _JD_PREFIX.sub("", dirname).strip().lower()
+    return stripped if stripped in CANONICAL_LAYERS else None
+
+
 def check_structure(vault: Path) -> Check:
-    return Check("Structure", "_(not implemented)_", "")
+    """Map top-level folders to canonical layer keys."""
+    dirs = _iter_top_level_dirs(vault)
+    mapping: dict[str, Path] = {}
+    duplicates: list[tuple[str, Path]] = []
+    unmatched: list[Path] = []
+    for d in dirs:
+        key = _map_to_canonical(d.name)
+        if key is None:
+            unmatched.append(d)
+        elif key in mapping:
+            duplicates.append((key, d))
+        else:
+            mapping[key] = d
+
+    missing = [k for k in CANONICAL_LAYERS if k not in mapping]
+    loose_md = sorted(
+        p for p in vault.iterdir()
+        if p.is_file() and p.suffix == ".md" and not p.name.startswith(".")
+    )
+
+    present = len(mapping)
+    if missing:
+        headline = (
+            f"**{present}/{len(CANONICAL_LAYERS)} canonical layers mapped.** "
+            f"Missing: {', '.join(f'`{m}`' for m in missing)}."
+        )
+    else:
+        headline = f"**All {len(CANONICAL_LAYERS)} canonical layers present.**"
+
+    rows = ["| Canonical key | Folder | Status |", "|---|---|---|"]
+    for key in CANONICAL_LAYERS:
+        folder = mapping.get(key)
+        if folder is None:
+            rows.append(f"| `{key}` | _missing_ | **gap** |")
+        else:
+            rows.append(f"| `{key}` | `{folder.name}/` | ok |")
+
+    if unmatched:
+        rows += ["", "**Unmatched top-level folders** (not in canonical set):", ""]
+        rows += [f"- `{d.name}/`" for d in unmatched]
+
+    if duplicates:
+        rows += ["", "**Duplicate mappings** (two folders mapped to same key):", ""]
+        rows += [f"- `{d.name}/` -> `{key}`" for key, d in duplicates]
+
+    if loose_md:
+        rows += ["", "**Loose .md files at vault root** (should live inside a layer):", ""]
+        rows += [f"- `{f.name}`" for f in loose_md]
+
+    return Check("Structure", headline, "\n".join(rows))
 
 
 def check_scale(vault: Path) -> Check:
-    return Check("Scale", "_(not implemented)_", "")
+    """Count markdown files, total and per top-level folder."""
+    files = _iter_markdown_files(vault)
+    total = len(files)
+    per_dir: Counter[str] = Counter()
+    for f in files:
+        per_dir[f.relative_to(vault).parts[0]] += 1
+
+    headline = f"**{total} markdown files** under visible (non-hidden) paths."
+
+    rows = ["| Top-level folder | .md count |", "|---|---|"]
+    for name, count in per_dir.most_common():
+        rows.append(f"| `{name}` | {count} |")
+    rows.append(f"| **total** | **{total}** |")
+    return Check("Scale", headline, "\n".join(rows))
 
 
 def check_frontmatter_coverage(vault: Path) -> Check:
-    return Check("Frontmatter coverage", "_(not implemented)_", "")
+    """Measure presence of the 4 required frontmatter fields."""
+    files = _iter_markdown_files(vault)
+    total = len(files)
+    if total == 0:
+        return Check("Frontmatter coverage", "_No markdown files found._", "")
+
+    any_fm = 0
+    fully_compliant = 0
+    missing_counter: Counter[str] = Counter()
+    parse_errors: list[Path] = []
+
+    for f in files:
+        try:
+            post = frontmatter.load(f)
+        except Exception:
+            parse_errors.append(f)
+            continue
+
+        meta = post.metadata or {}
+        if meta:
+            any_fm += 1
+
+        missing_here = [
+            field for field in REQUIRED_FRONTMATTER_FIELDS
+            if not meta.get(field)
+        ]
+        if not missing_here:
+            fully_compliant += 1
+        else:
+            for field in missing_here:
+                missing_counter[field] += 1
+
+    pct_any = 100.0 * any_fm / total
+    pct_full = 100.0 * fully_compliant / total
+
+    headline = (
+        f"**{pct_any:.0f}% have any frontmatter; "
+        f"{pct_full:.0f}% have all 4 required fields** "
+        f"({fully_compliant}/{total} fully compliant)."
+    )
+
+    rows = ["| Required field | Missing from | Share |", "|---|---|---|"]
+    for field in REQUIRED_FRONTMATTER_FIELDS:
+        count = missing_counter[field]
+        pct = 100.0 * count / total
+        rows.append(f"| `{field}` | {count} | {pct:.0f}% |")
+
+    if parse_errors:
+        rows += ["", f"**YAML parse errors:** {len(parse_errors)} files (first 5):", ""]
+        rows += [f"- `{p.relative_to(vault)}`" for p in parse_errors[:5]]
+
+    return Check("Frontmatter coverage", headline, "\n".join(rows))
 
 
 def check_enums(vault: Path) -> Check:
