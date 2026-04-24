@@ -2,18 +2,16 @@
 # Proves the spec does not hardcode English or numeric prefixes.
 
 layers:
-  inbox:     "Fleeting"
+  inbox: "Fleeting"
   journal:
-    path:    "Daily"
-    format:  "YYYY-MM-DD.md"
-  projects:  "Projects"
-  areas:     "Permanent"
-  brain:     "Literature"
-  system:    "Meta"
+    path:   "Daily"
+    format: "YYYY-MM-DD.md"
+  projects: "Projects"
+  areas:    "Permanent"
+  brain:    "Literature"
   archive:
-    path:    "Meta/Archive"
+    path: "Archive"
     year_subfolder: true
-  templates: "Meta/Templates"
 
 domains:
   - research

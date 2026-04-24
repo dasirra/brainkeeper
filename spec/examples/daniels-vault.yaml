@@ -6,18 +6,15 @@ layers:
   journal:
     path: "10 Journal"
     format: "YYYY-MM-DD.md"
-    template: "90 System/Templates/Daily.md"
   projects:
     path: "20 Projects"
     status_field: status
     active_values: ["active", "🟢"]
   areas: "30 Areas"
   brain: "40 Brain"
-  system: "90 System"
   archive:
-    path: "90 System/Archive"
+    path: "90 Archive"
     year_subfolder: true
-  templates: "90 System/Templates"
 
 domains:
   - freelance

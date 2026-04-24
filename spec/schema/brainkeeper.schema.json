@@ -9,21 +9,18 @@
   "properties": {
     "layers": {
       "type": "object",
-      "description": "Mapping of layer keys to filesystem paths. All 8 keys are required. Each value may be a string shorthand (path only) or an object with additional options.",
+      "description": "Mapping of layer keys to filesystem paths. All 6 keys are required. Each value may be a string shorthand (path only) or an object with additional options.",
       "required": [
-        "inbox", "journal", "projects", "areas",
-        "brain", "system", "archive", "templates"
+        "inbox", "journal", "projects", "areas", "brain", "archive"
       ],
       "additionalProperties": false,
       "properties": {
-        "inbox":     { "$ref": "#/$defs/layerEntry" },
-        "journal":   { "$ref": "#/$defs/layerEntry" },
-        "projects":  { "$ref": "#/$defs/layerEntry" },
-        "areas":     { "$ref": "#/$defs/layerEntry" },
-        "brain":     { "$ref": "#/$defs/layerEntry" },
-        "system":    { "$ref": "#/$defs/layerEntry" },
-        "archive":   { "$ref": "#/$defs/layerEntry" },
-        "templates": { "$ref": "#/$defs/layerEntry" }
+        "inbox":    { "$ref": "#/$defs/layerEntry" },
+        "journal":  { "$ref": "#/$defs/layerEntry" },
+        "projects": { "$ref": "#/$defs/layerEntry" },
+        "areas":    { "$ref": "#/$defs/layerEntry" },
+        "brain":    { "$ref": "#/$defs/layerEntry" },
+        "archive":  { "$ref": "#/$defs/layerEntry" }
       }
     },
     "domains": {
@@ -59,12 +56,11 @@
           "required": ["path"],
           "additionalProperties": false,
           "properties": {
-            "path":          { "$ref": "#/$defs/relPath" },
-            "format":        { "type": "string" },
-            "template":      { "$ref": "#/$defs/relPath" },
-            "status_field":  { "type": "string" },
-            "active_values": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-            "year_subfolder":{ "type": "boolean" }
+            "path":           { "$ref": "#/$defs/relPath" },
+            "format":         { "type": "string" },
+            "status_field":   { "type": "string" },
+            "active_values":  { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "year_subfolder": { "type": "boolean" }
           }
         }
       ]

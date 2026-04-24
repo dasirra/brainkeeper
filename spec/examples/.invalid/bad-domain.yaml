@@ -1,13 +1,11 @@
 # INVALID: domain "Personal_Life" breaks the kebab-case lowercase rule.
 layers:
-  inbox: "00 Inbox"
-  journal: "10 Journal"
+  inbox:    "00 Inbox"
+  journal:  "10 Journal"
   projects: "20 Projects"
-  areas: "30 Areas"
-  brain: "40 Brain"
-  system: "90 System"
-  archive: "90 System/Archive"
-  templates: "90 System/Templates"
+  areas:    "30 Areas"
+  brain:    "40 Brain"
+  archive:  "90 Archive"
 
 domains:
   - Personal_Life
