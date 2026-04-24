@@ -4,7 +4,7 @@
   "title": "brainkeeper vault config",
   "description": "Configuration file format for a brainkeeper-compliant Second Brain vault.",
   "type": "object",
-  "required": ["layers", "domains", "capture_routing"],
+  "required": ["layers", "capture_routing"],
   "additionalProperties": false,
   "properties": {
     "layers": {
@@ -22,13 +22,6 @@
         "brain":    { "$ref": "#/$defs/layerEntry" },
         "archive":  { "$ref": "#/$defs/layerEntry" }
       }
-    },
-    "domains": {
-      "type": "array",
-      "description": "List of domain values used as the required `domain/*` tag dimension on every managed note.",
-      "minItems": 1,
-      "uniqueItems": true,
-      "items": { "$ref": "#/$defs/domainName" }
     },
     "capture_routing": {
       "type": "object",
@@ -64,13 +57,6 @@
           }
         }
       ]
-    },
-    "domainName": {
-      "type": "string",
-      "description": "Lowercase, kebab-case, singular. Used as the value of a `domain/*` tag.",
-      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
-      "minLength": 2,
-      "maxLength": 40
     },
     "routeTarget": {
       "type": "string",

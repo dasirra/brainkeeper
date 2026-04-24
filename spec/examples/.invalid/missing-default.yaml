@@ -7,7 +7,5 @@ layers:
   brain:    "40 Brain"
   archive:  "90 Archive"
 
-domains: [personal]
-
 capture_routing:
   idea: "30 Areas/Ideas.md"

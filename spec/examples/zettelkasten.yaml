@@ -13,12 +13,6 @@ layers:
     path: "Archive"
     year_subfolder: true
 
-domains:
-  - research
-  - writing
-  - reading
-  - personal
-
 capture_routing:
   idea:    "Fleeting/Ideas.md"
   default: "Fleeting/"

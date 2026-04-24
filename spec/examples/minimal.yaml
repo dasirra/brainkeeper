@@ -1,7 +1,8 @@
 # Smallest valid brainkeeper config.
 # All 6 layer keys are required (string shorthand allowed).
-# At least one domain is required.
 # capture_routing must include a `default`.
+# Domain vocabulary is derived at runtime from folders under projects/ and areas/;
+# the config does not enumerate domains.
 
 layers:
   inbox:    "00 Inbox"
@@ -10,9 +11,6 @@ layers:
   areas:    "30 Areas"
   brain:    "40 Brain"
   archive:  "90 Archive"
-
-domains:
-  - personal
 
 capture_routing:
   default: "00 Inbox/"

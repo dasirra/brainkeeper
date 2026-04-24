@@ -1,5 +1,6 @@
 # Full reference config. Daniel Sierra's vault.
 # Demonstrates the object-form for layers that accept options.
+# No domains list: vocabulary derives from folders under projects/ and areas/.
 
 layers:
   inbox: "00 Inbox"
@@ -15,17 +16,6 @@ layers:
   archive:
     path: "90 Archive"
     year_subfolder: true
-
-domains:
-  - freelance
-  - fitizens
-  - learning
-  - teaching
-  - content
-  - personal
-  - family
-  - homelab
-  - ideas
 
 capture_routing:
   idea:    "30 Areas/Ideas/Inbox.md"

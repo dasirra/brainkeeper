@@ -1,4 +1,4 @@
-# INVALID: domain "Personal_Life" breaks the kebab-case lowercase rule.
+# INVALID: `domains` is no longer an accepted root key; additionalProperties:false rejects it.
 layers:
   inbox:    "00 Inbox"
   journal:  "10 Journal"
@@ -7,8 +7,8 @@ layers:
   brain:    "40 Brain"
   archive:  "90 Archive"
 
-domains:
-  - Personal_Life
-
 capture_routing:
   default: "00 Inbox/"
+
+domains:
+  - fitizens
