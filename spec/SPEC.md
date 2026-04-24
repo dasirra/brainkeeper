@@ -204,3 +204,39 @@ brainkeeper uses a hierarchical tag grammar. Dimensions (prefixes) are prescribe
 
 **Note filenames (general).** Title Case with spaces (`Great Article on Caching.md`). Avoid special characters that break wikilinks: `[`, `]`, `|`, `#`, `^`, `:`, `\`, `/`.
 
+
+### 9. Linking convention
+
+Internal references between notes MUST use wikilink syntax:
+
+- `[[Note Name]]`. Link by title (filename without `.md`).
+- `[[Path/To/Note|Alias]]`. Link by relative path, with a display alias.
+
+Standard Markdown links (`[text](path.md)`) MUST NOT be used for internal references. They are permitted for external URLs only.
+
+**Disambiguation.** When two notes share a filename, use the relative path form to disambiguate. Tools SHOULD prefer the shortest unique path that resolves unambiguously.
+
+**Embedded blocks.** `[[Note#Heading]]` and `[[Note^block-id]]` are permitted for heading and block references. Block IDs follow Obsidian conventions but are optional.
+
+### 10. Template contract
+
+Templates live in the `templates` layer (default `90 System/Templates/`). Required templates:
+
+| File              | Purpose |
+|-------------------|---------|
+| `Daily.md`        | Template for daily journal notes. |
+| `Project.md`      | Template for new project notes. |
+| `Area Index.md`   | Template for area entry-point notes. |
+| `Idea.md`         | Template for captured ideas. |
+| `Meeting.md`      | Template for meeting notes. |
+
+**Substitution.** Templates support simple `{{variable}}` substitution. Defined variables:
+
+| Variable    | Meaning |
+|-------------|---------|
+| `{{date}}`  | Date the note refers to (`YYYY-MM-DD`). |
+| `{{today}}` | Today's date (`YYYY-MM-DD`). |
+| `{{title}}` | Title of the note being created. |
+
+Unknown variables MUST be left untouched by substituting tools (no silent deletion). Additional variables MAY be defined by tooling as long as they do not collide with the reserved names above.
+
