@@ -187,3 +187,20 @@ brainkeeper uses a hierarchical tag grammar. Dimensions (prefixes) are prescribe
 
 **Domain tag grammar.** Values for `domain/*` MUST appear in the `domains:` list of `brainkeeper.yaml`. Domain names are lowercase kebab-case (regex: `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`, length 2 to 40). Adding a new domain is a one-line config edit (see §15).
 
+
+### 8. Naming conventions
+
+**Dates.** Use ISO 8601 `YYYY-MM-DD` for all dates: filenames, frontmatter values, anchor references.
+
+**Daily notes.** `journal/YYYY-MM-DD.md` (e.g. `10 Journal/2026-04-24.md`). The file name pattern is configurable via `layers.journal.format` (default `YYYY-MM-DD.md`).
+
+**Meeting notes.** `journal/YYYY-MM-DD - <Slug>.md` (e.g. `10 Journal/2026-04-24 - Fitizens Standup.md`). Meetings are separate files from the daily note and SHOULD be linked from the day's journal.
+
+**Index files.** `<Name> Index.md`. The `Index.md` suffix is reserved for entry-point notes inside project and area folders (e.g. `20 Projects/Brainkeeper/Brainkeeper Index.md`). Tools MAY treat these specially.
+
+**Project and area folders.** Title Case, no numeric prefixes inside the layer:
+- `20 Projects/Brainkeeper/` (good)
+- `20 Projects/03-brainkeeper/` (not recommended)
+
+**Note filenames (general).** Title Case with spaces (`Great Article on Caching.md`). Avoid special characters that break wikilinks: `[`, `]`, `|`, `#`, `^`, `:`, `\`, `/`.
+
