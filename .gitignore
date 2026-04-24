@@ -207,4 +207,4 @@ marimo/_lsp/
 __marimo__/
 
 # brainkeeper vault audit reports (contain vault paths, keep local)
-vault-audit-*.md
+/vault-audit-*.md
