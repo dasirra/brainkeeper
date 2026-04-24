@@ -12,9 +12,9 @@ uvx check-jsonschema --schemafile spec/schema/brainkeeper.schema.json path/to/yo
 
 ## Examples
 
-- [`examples/minimal.yaml`](./examples/minimal.yaml) — smallest valid config
-- [`examples/daniels-vault.yaml`](./examples/daniels-vault.yaml) — full reference config
-- [`examples/zettelkasten.yaml`](./examples/zettelkasten.yaml) — alternative style
+- [`examples/minimal.yaml`](./examples/minimal.yaml) - smallest valid config
+- [`examples/daniels-vault.yaml`](./examples/daniels-vault.yaml) - full reference config
+- [`examples/zettelkasten.yaml`](./examples/zettelkasten.yaml) - alternative style
 
 ## Versioning
 
