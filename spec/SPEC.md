@@ -78,3 +78,33 @@ A conforming vault MUST contain the eight layer directories at the configured pa
 
 No other paths are reserved by this spec. Users remain free to create any subdirectory structure inside any layer.
 
+### 4. Area substructure
+
+Within the `areas` layer, users MAY create arbitrary subdirectories to organize ongoing responsibilities. Common patterns observed in practice:
+
+```
+30 Areas/
+├── Finanzas/
+├── Pipeline/
+├── Portfolio/
+└── Research/
+```
+
+This is a soft convention. Sub-structure inside `areas` is not validated by the spec. Tools SHOULD treat any direct child of `areas` as a candidate area folder and MAY look for an `<Area> Index.md` file inside it (see §8).
+
+### 5. Bilingual, language-agnostic folders
+
+Folder names in a brainkeeper vault are strings of the user's choosing. The spec reserves no English identifiers for on-disk names. A Spanish-speaking user MAY configure:
+
+```yaml
+layers:
+  inbox:    "00 Bandeja"
+  journal:  "10 Diario"
+  projects: "20 Proyectos"
+  # ...
+```
+
+and the vault remains compliant. Tooling MUST reference layers by their canonical key (`layers.projects`) and never by a literal path string.
+
+This rule applies to all spec-reserved concepts: domains (§7), template file names (§10), status values (§13), and capture routes (§14) are user-configurable strings mapped through the config file.
+
