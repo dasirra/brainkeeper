@@ -1,0 +1,26 @@
+# Zettelkasten-style vault. Custom folder names.
+# Proves the spec does not hardcode English or numeric prefixes.
+
+layers:
+  inbox:     "Fleeting"
+  journal:
+    path:    "Daily"
+    format:  "YYYY-MM-DD.md"
+  projects:  "Projects"
+  areas:     "Permanent"
+  brain:     "Literature"
+  system:    "Meta"
+  archive:
+    path:    "Meta/Archive"
+    year_subfolder: true
+  templates: "Meta/Templates"
+
+domains:
+  - research
+  - writing
+  - reading
+  - personal
+
+capture_routing:
+  idea:    "Fleeting/Ideas.md"
+  default: "Fleeting/"
