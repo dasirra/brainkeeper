@@ -1,0 +1,15 @@
+# INVALID: absolute path under layers.inbox.
+layers:
+  inbox: "/absolute/path/inbox"
+  journal: "10 Journal"
+  projects: "20 Projects"
+  areas: "30 Areas"
+  brain: "40 Brain"
+  system: "90 System"
+  archive: "90 System/Archive"
+  templates: "90 System/Templates"
+
+domains: [personal]
+
+capture_routing:
+  default: "00 Inbox/"

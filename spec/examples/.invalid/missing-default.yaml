@@ -1,0 +1,15 @@
+# INVALID: capture_routing is missing `default`.
+layers:
+  inbox: "00 Inbox"
+  journal: "10 Journal"
+  projects: "20 Projects"
+  areas: "30 Areas"
+  brain: "40 Brain"
+  system: "90 System"
+  archive: "90 System/Archive"
+  templates: "90 System/Templates"
+
+domains: [personal]
+
+capture_routing:
+  idea: "30 Areas/Ideas.md"
