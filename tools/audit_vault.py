@@ -35,7 +35,19 @@ CANONICAL_LAYERS: tuple[str, ...] = (
 REQUIRED_FRONTMATTER_FIELDS: tuple[str, ...] = (
     "type", "status", "created", "tags",
 )
+ALLOWED_TYPES: frozenset[str] = frozenset((
+    "project", "area", "idea", "journal",
+    "meeting", "note", "resource", "knowledge",
+))
+ALLOWED_STATUSES: frozenset[str] = frozenset((
+    "active", "paused", "completed", "archived",
+))
+
 _JD_PREFIX = re.compile(r"^\d+\s+")
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_DAILY_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
+_MEETING_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2} - .+\.md$")
+_LEADING_DIGIT = re.compile(r"^\d")
 
 
 @dataclass
@@ -68,6 +80,25 @@ def _map_to_canonical(dirname: str) -> str | None:
     """Map a folder name to a canonical layer key, or None."""
     stripped = _JD_PREFIX.sub("", dirname).strip().lower()
     return stripped if stripped in CANONICAL_LAYERS else None
+
+
+def _layer_mappings(vault: Path) -> dict[str, Path]:
+    """Build a canonical-key -> top-level folder mapping (first match wins)."""
+    result: dict[str, Path] = {}
+    for d in _iter_top_level_dirs(vault):
+        key = _map_to_canonical(d.name)
+        if key and key not in result:
+            result[key] = d
+    return result
+
+
+def _load_frontmatter(path: Path) -> dict | None:
+    """Parse frontmatter metadata; return None on unreadable/malformed file."""
+    try:
+        post = frontmatter.load(path)
+    except Exception:
+        return None
+    return post.metadata or {}
 
 
 def check_structure(vault: Path) -> Check:
@@ -196,15 +227,150 @@ def check_frontmatter_coverage(vault: Path) -> Check:
 
 
 def check_enums(vault: Path) -> Check:
-    return Check("Enum violations", "_(not implemented)_", "")
+    """Validate `type` and `status` frontmatter values against the spec enums."""
+    bad_types: list[tuple[str, Path]] = []
+    bad_statuses: list[tuple[str, Path]] = []
+    for f in _iter_markdown_files(vault):
+        meta = _load_frontmatter(f)
+        if meta is None:
+            continue
+        t = meta.get("type")
+        if t and str(t) not in ALLOWED_TYPES:
+            bad_types.append((str(t), f))
+        s = meta.get("status")
+        if s and str(s) not in ALLOWED_STATUSES:
+            bad_statuses.append((str(s), f))
+
+    total = len(bad_types) + len(bad_statuses)
+    if total == 0:
+        return Check("Enum violations", "**No enum violations.**", "")
+
+    headline = (
+        f"**{len(bad_types)} invalid `type` values, "
+        f"{len(bad_statuses)} invalid `status` values.**"
+    )
+
+    lines: list[str] = []
+    if bad_types:
+        lines.append("**Bad `type` values:**")
+        lines.append("")
+        counts = Counter(v for v, _ in bad_types)
+        for value, n in counts.most_common():
+            examples = [
+                f"`{p.relative_to(vault)}`"
+                for v, p in bad_types if v == value
+            ][:3]
+            lines.append(f"- `{value}` ({n}): {', '.join(examples)}")
+    if bad_statuses:
+        if lines:
+            lines.append("")
+        lines.append("**Bad `status` values:**")
+        lines.append("")
+        counts = Counter(v for v, _ in bad_statuses)
+        for value, n in counts.most_common():
+            examples = [
+                f"`{p.relative_to(vault)}`"
+                for v, p in bad_statuses if v == value
+            ][:3]
+            lines.append(f"- `{value}` ({n}): {', '.join(examples)}")
+
+    return Check("Enum violations", headline, "\n".join(lines))
 
 
 def check_dates(vault: Path) -> Check:
-    return Check("Date format", "_(not implemented)_", "")
+    """Check that `created`, `deadline`, `archived` parse as YYYY-MM-DD."""
+    bad: list[tuple[str, str, Path]] = []
+    for f in _iter_markdown_files(vault):
+        meta = _load_frontmatter(f)
+        if meta is None:
+            continue
+        for field in ("created", "deadline", "archived"):
+            v = meta.get(field)
+            if v in (None, "", False):
+                continue
+            if not _DATE_RE.match(str(v)):
+                bad.append((field, str(v), f))
+
+    if not bad:
+        return Check(
+            "Date format",
+            "**All non-empty date fields match `YYYY-MM-DD`.**",
+            "",
+        )
+
+    headline = f"**{len(bad)} date-field violations.**"
+    per_field = Counter(field for field, _, _ in bad)
+
+    lines = ["| Field | Violations |", "|---|---|"]
+    for field in ("created", "deadline", "archived"):
+        lines.append(f"| `{field}` | {per_field[field]} |")
+    lines.append("")
+    lines.append("**Examples (first 10):**")
+    lines.append("")
+    for field, value, path in bad[:10]:
+        lines.append(f"- `{path.relative_to(vault)}` - `{field}: {value}`")
+    return Check("Date format", headline, "\n".join(lines))
 
 
 def check_naming(vault: Path) -> Check:
-    return Check("Naming", "_(not implemented)_", "")
+    """Check journal filename pattern and project/area folder prefixes."""
+    mappings = _layer_mappings(vault)
+    journal = mappings.get("journal")
+    projects = mappings.get("projects")
+    areas = mappings.get("areas")
+
+    bad_journal: list[Path] = []
+    if journal and journal.is_dir():
+        for f in journal.iterdir():
+            if not (f.is_file() and f.suffix == ".md"):
+                continue
+            if f.name.startswith("."):
+                continue
+            if _DAILY_FILE_RE.match(f.name) or _MEETING_FILE_RE.match(f.name):
+                continue
+            bad_journal.append(f)
+
+    bad_layer_folders: dict[str, list[Path]] = {}
+    for key, layer_dir in (("projects", projects), ("areas", areas)):
+        if not (layer_dir and layer_dir.is_dir()):
+            continue
+        offenders = [
+            d for d in layer_dir.iterdir()
+            if d.is_dir() and not d.name.startswith(".") and _LEADING_DIGIT.match(d.name)
+        ]
+        if offenders:
+            bad_layer_folders[key] = sorted(offenders)
+
+    total = len(bad_journal) + sum(len(v) for v in bad_layer_folders.values())
+    if total == 0:
+        return Check("Naming", "**All naming conventions look clean.**", "")
+
+    headline = f"**{total} naming-convention violations.**"
+    lines: list[str] = []
+
+    if bad_journal:
+        lines.append(
+            f"**Journal files not matching `YYYY-MM-DD.md` or "
+            f"`YYYY-MM-DD - <Slug>.md` ({len(bad_journal)}):**"
+        )
+        lines.append("")
+        for p in bad_journal[:25]:
+            lines.append(f"- `{p.relative_to(vault)}`")
+        if len(bad_journal) > 25:
+            lines.append(f"- _... {len(bad_journal) - 25} more_")
+
+    for key, folders in bad_layer_folders.items():
+        if lines:
+            lines.append("")
+        lines.append(
+            f"**`{key}/` subfolders with numeric prefix "
+            f"(Title Case without prefix expected) ({len(folders)}):**"
+        )
+        lines.append("")
+        for p in folders:
+            lines.append(f"- `{p.relative_to(vault)}`")
+
+    return Check("Naming", headline, "\n".join(lines))
 
 
 def check_links(vault: Path) -> Check:
