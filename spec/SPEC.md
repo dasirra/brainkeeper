@@ -281,3 +281,91 @@ The `status` frontmatter field takes one of four values:
 
 The `status_field` under `layers.projects` MAY be renamed (default is `status`) and `active_values` MAY include additional synonyms (e.g. `"🟢"`) for users who prefer emoji status markers. Tooling MUST consult the config before filtering by status.
 
+## Part IV: Implementation notes
+
+### 14. Config file format
+
+A brainkeeper-compliant vault MUST contain a `brainkeeper.yaml` at its root. The file is validated against `brainkeeper.schema.json` (JSON Schema Draft 2020-12).
+
+**Full example** (reference vault):
+
+```yaml
+layers:
+  inbox: "00 Inbox"
+  journal:
+    path: "10 Journal"
+    format: "YYYY-MM-DD.md"
+    template: "90 System/Templates/Daily.md"
+  projects:
+    path: "20 Projects"
+    status_field: status
+    active_values: ["active", "🟢"]
+  areas: "30 Areas"
+  brain: "40 Brain"
+  system: "90 System"
+  archive:
+    path: "90 System/Archive"
+    year_subfolder: true
+  templates: "90 System/Templates"
+
+domains:
+  - freelance
+  - fitizens
+  - learning
+  - teaching
+  - content
+  - personal
+  - family
+  - homelab
+  - ideas
+
+capture_routing:
+  idea:    "30 Areas/Ideas/Inbox.md"
+  todo:    "00 Inbox/Todos.md"
+  meeting: "10 Journal/{today}.md#Meetings"
+  default: "00 Inbox/"
+```
+
+**Shorthand vs object form for layers.** Each layer entry accepts either a string (shorthand: path only) or an object (when the layer needs additional options: `format`, `template`, `status_field`, `active_values`, `year_subfolder`). The schema defines which options apply to which layers.
+
+**Path rules.** Paths under `layers.*` are vault-relative. Leading `/` is invalid. `..` segments are invalid.
+
+**Capture routes.** A route value ending in `/` denotes a folder (new file per capture). A bare path denotes append-to-file. A `#Anchor` suffix targets a heading inside that file. The token `{today}` is substituted with the current date (`YYYY-MM-DD`).
+
+**Minimum viable config.** See [`examples/minimal.yaml`](./examples/minimal.yaml).
+
+### 15. Extension points
+
+The following additions do NOT require a change to the spec or the schema. They are expressible in config alone:
+
+- Adding a new domain: append to `domains:`.
+- Adding a new capture route: add a key under `capture_routing:`.
+- Adding a new template: drop the file in the `templates` layer and reference it from a layer entry.
+- Renaming any folder: change the corresponding path under `layers:`.
+
+Tooling SHOULD support live config reload: changes to `brainkeeper.yaml` should take effect without a restart. Notes whose domain tag was just added become valid; notes whose domain tag was just removed become orphans (see §7).
+
+### 16. Obsidian compatibility notes
+
+The spec is tool-agnostic. Nothing in Parts I to III depends on Obsidian. This section documents compatibility choices that make a brainkeeper vault cleanly openable in Obsidian:
+
+- **Wikilink syntax.** `[[Note Name]]` is Obsidian's native link style (§9).
+- **YAML frontmatter.** The Properties feature in Obsidian reads the same `---` front block (§6).
+- **Folder names.** Arbitrary strings; Obsidian imposes no folder naming rules beyond the OS filesystem.
+- **Templates.** The `{{date}}` / `{{title}}` variables map onto Obsidian's Templates core plugin. Users who prefer the Templater community plugin MAY use its richer syntax inside template files as long as the reserved variables keep their brainkeeper meaning.
+
+brainkeeper vaults work equally well in Logseq, Silverbullet, and plain-text editors, provided the editor preserves YAML frontmatter and does not rewrite wikilinks into Markdown links.
+
+---
+
+## Appendix A: Schema
+
+The canonical JSON Schema is at [`schema/brainkeeper.schema.json`](./schema/brainkeeper.schema.json). Validate a config with:
+
+```bash
+uvx check-jsonschema --schemafile spec/schema/brainkeeper.schema.json path/to/brainkeeper.yaml
+```
+
+## Appendix B: Versioning
+
+Spec versions follow SemVer with the `spec-` prefix: `spec-v0.1.0`, `spec-v0.2.0`, `spec-v1.0.0`. Breaking changes bump the major component.
