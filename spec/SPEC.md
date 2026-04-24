@@ -44,3 +44,37 @@ The spec is tool-agnostic: any editor that writes Markdown with YAML frontmatter
 16. Obsidian compatibility notes
 
 ---
+## Part I: Structure
+
+### 1. Layers
+
+A brainkeeper vault organizes content into exactly eight top-level layers. Each layer has a single purpose:
+
+| Key         | Default path          | Purpose |
+|-------------|-----------------------|---------|
+| `inbox`     | `00 Inbox`            | Unprocessed capture. Notes live here until triaged. |
+| `journal`   | `10 Journal`          | Dated notes: dailies, meeting notes, session logs. |
+| `projects`  | `20 Projects`         | Outcomes with a defined end state. |
+| `areas`     | `30 Areas`            | Ongoing responsibilities without a finish line. |
+| `brain`     | `40 Brain`            | Evergreen knowledge: concepts, references, notes-on-notes. |
+| `system`    | `90 System`           | Meta: templates, archive, vault tooling. |
+| `archive`   | `90 System/Archive`   | Completed or retired content. Usually a child of `system`. |
+| `templates` | `90 System/Templates` | Template files for new notes. Usually a child of `system`. |
+
+The keys are canonical. Paths are user-configurable in `brainkeeper.yaml` (see §5, §14). All eight keys MUST be present in the config; a vault that lacks, for example, a journal layer is out of scope for v1.
+
+### 2. Numbered prefixes
+
+The default paths use a Johnny Decimal-inspired numeric prefix convention: `00 Inbox`, `10 Journal`, `20 Projects`, `30 Areas`, `40 Brain`, `90 System`. Gaps (50, 60, 70, 80) are deliberate and reserved for user expansion; a tool-specific vault might add a `50 Media` or `70 Archive-Cold` layer outside of the standard keys.
+
+Prefixes are a convention, not a requirement. A vault MAY use non-numeric names (see §5 and the `zettelkasten.yaml` example) as long as the eight layer keys map to valid relative paths.
+
+### 3. Reserved paths
+
+A conforming vault MUST contain the eight layer directories at the configured paths. Tooling MAY auto-create any missing layer directory on startup. Two paths are additionally reserved:
+
+- **`<archive>/<YYYY>/`**. If the `archive` layer uses `year_subfolder: true` (default), tooling creates per-year subfolders on demand when archiving.
+- **`<templates>/`**. Reserved for template files referenced by layer entries or tooling (see §10).
+
+No other paths are reserved by this spec. Users remain free to create any subdirectory structure inside any layer.
+
