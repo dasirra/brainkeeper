@@ -240,3 +240,44 @@ Templates live in the `templates` layer (default `90 System/Templates/`). Requir
 
 Unknown variables MUST be left untouched by substituting tools (no silent deletion). Additional variables MAY be defined by tooling as long as they do not collide with the reserved names above.
 
+## Part III: Lifecycle
+
+### 11. Classification rules
+
+A new note with no obvious destination SHOULD be written to the `inbox` layer. Triage moves the note to its final layer. Tools offering a `capture` operation SHOULD:
+
+1. Inspect the `type` field (or infer from content).
+2. Look up `capture_routing.<type>` in the config.
+3. Fall back to `capture_routing.default` if no route matches.
+
+### 12. Transition rules
+
+Only four layer-to-layer transitions are part of the standard:
+
+| From                    | To                        | Trigger |
+|-------------------------|---------------------------|---------|
+| `inbox`                 | any layer                 | Triage |
+| `areas/Ideas`           | `projects`                | Idea matures into a bounded outcome |
+| `projects`              | `archive/YYYY`            | Project completed or abandoned |
+| `areas/<Area>`          | `archive/YYYY`            | Area retired |
+
+On any transition, tools MUST:
+- Update `status` in frontmatter (see §13).
+- Set `archived: YYYY-MM-DD` when moving into the archive.
+- Preserve all other frontmatter fields unchanged.
+
+Other moves (e.g. `brain` to `archive`) are permitted but not blessed by the spec. Tools MAY refuse unknown transitions or require explicit user confirmation.
+
+### 13. Status semantics
+
+The `status` frontmatter field takes one of four values:
+
+| Value       | Meaning |
+|-------------|---------|
+| `active`    | Work in progress. Default for new projects and areas. |
+| `paused`    | Deferred without abandoning. Hidden from default query views. |
+| `completed` | Outcome reached. Should be archived soon. |
+| `archived`  | Moved to the archive layer. `archived` frontmatter field is set to the archive date. |
+
+The `status_field` under `layers.projects` MAY be renamed (default is `status`) and `active_values` MAY include additional synonyms (e.g. `"🟢"`) for users who prefer emoji status markers. Tooling MUST consult the config before filtering by status.
+
