@@ -48,6 +48,9 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DAILY_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
 _MEETING_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2} - .+\.md$")
 _LEADING_DIGIT = re.compile(r"^\d")
+_WIKILINK_RE = re.compile(r"\[\[[^\]]+\]\]")
+_INTERNAL_MD_LINK_RE = re.compile(r"\]\((?!https?://|mailto:)[^)]+\.md(?:#[^)]*)?\)")
+_TAG_RE = re.compile(r"^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)*$")
 
 
 @dataclass
@@ -374,11 +377,93 @@ def check_naming(vault: Path) -> Check:
 
 
 def check_links(vault: Path) -> Check:
-    return Check("Link style", "_(not implemented)_", "")
+    """Count wikilinks vs non-compliant markdown links to local .md files."""
+    wikilinks = 0
+    mdlinks = 0
+    files_with_mdlinks: list[tuple[Path, int]] = []
+    for f in _iter_markdown_files(vault):
+        try:
+            content = f.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        wl = len(_WIKILINK_RE.findall(content))
+        ml = len(_INTERNAL_MD_LINK_RE.findall(content))
+        wikilinks += wl
+        mdlinks += ml
+        if ml:
+            files_with_mdlinks.append((f, ml))
+
+    total = wikilinks + mdlinks
+    if total == 0:
+        return Check("Link style", "_No internal links detected._", "")
+
+    pct_wiki = 100.0 * wikilinks / total
+    headline = (
+        f"**{wikilinks} wikilinks, {mdlinks} markdown links to .md files** "
+        f"({pct_wiki:.0f}% wikilink-compliant)."
+    )
+    if mdlinks == 0:
+        return Check("Link style", headline, "")
+
+    files_with_mdlinks.sort(key=lambda x: -x[1])
+    lines = [
+        f"**Top files with non-compliant markdown links "
+        f"({len(files_with_mdlinks)} files total):**",
+        "",
+    ]
+    for path, n in files_with_mdlinks[:15]:
+        lines.append(f"- `{path.relative_to(vault)}` ({n})")
+    if len(files_with_mdlinks) > 15:
+        lines.append(f"- _... {len(files_with_mdlinks) - 15} more files_")
+    return Check("Link style", headline, "\n".join(lines))
 
 
 def check_tags(vault: Path) -> Check:
-    return Check("Tag grammar", "_(not implemented)_", "")
+    """Validate tag grammar: lowercase, kebab-case, optional hierarchical `dim/value`."""
+    bad: list[tuple[str, Path]] = []
+    for f in _iter_markdown_files(vault):
+        meta = _load_frontmatter(f)
+        if meta is None:
+            continue
+        tags = meta.get("tags")
+        if tags in (None, "", False):
+            continue
+        if isinstance(tags, str):
+            tags = [tags]
+        if not isinstance(tags, (list, tuple)):
+            bad.append((f"_non-list tags: {type(tags).__name__}_", f))
+            continue
+        for t in tags:
+            if not isinstance(t, str):
+                bad.append((f"_non-string tag: {t!r}_", f))
+                continue
+            value = t.lstrip("#").strip()
+            if not value or not _TAG_RE.match(value):
+                bad.append((t, f))
+
+    if not bad:
+        return Check(
+            "Tag grammar",
+            "**All tags pass grammar (lowercase kebab-case, optional `dim/value`).**",
+            "",
+        )
+
+    headline = f"**{len(bad)} tag-grammar violations across the vault.**"
+    counts = Counter(t for t, _ in bad)
+    lines = [
+        f"**{len(counts)} distinct violating tag values "
+        f"(top 30 by frequency):**",
+        "",
+    ]
+    for tag, n in counts.most_common(30):
+        examples = [
+            f"`{p.relative_to(vault)}`"
+            for t, p in bad if t == tag
+        ][:3]
+        lines.append(f"- `{tag}` ({n} uses): {', '.join(examples)}")
+    if len(counts) > 30:
+        lines.append(f"- _... {len(counts) - 30} more distinct values_")
+    return Check("Tag grammar", headline, "\n".join(lines))
 
 
 def check_archive(vault: Path) -> Check:
