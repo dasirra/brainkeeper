@@ -1,1 +1,86 @@
-{}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dasirra/brainkeeper/spec/schema/brainkeeper.schema.json",
+  "title": "brainkeeper vault config",
+  "description": "Configuration file format for a brainkeeper-compliant Second Brain vault.",
+  "type": "object",
+  "required": ["layers", "domains", "capture_routing"],
+  "additionalProperties": false,
+  "properties": {
+    "layers": {
+      "type": "object",
+      "description": "Mapping of layer keys to filesystem paths. All 8 keys are required. Each value may be a string shorthand (path only) or an object with additional options.",
+      "required": [
+        "inbox", "journal", "projects", "areas",
+        "brain", "system", "archive", "templates"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "inbox":     { "$ref": "#/$defs/layerEntry" },
+        "journal":   { "$ref": "#/$defs/layerEntry" },
+        "projects":  { "$ref": "#/$defs/layerEntry" },
+        "areas":     { "$ref": "#/$defs/layerEntry" },
+        "brain":     { "$ref": "#/$defs/layerEntry" },
+        "system":    { "$ref": "#/$defs/layerEntry" },
+        "archive":   { "$ref": "#/$defs/layerEntry" },
+        "templates": { "$ref": "#/$defs/layerEntry" }
+      }
+    },
+    "domains": {
+      "type": "array",
+      "description": "List of domain values used as the required `domain/*` tag dimension on every managed note.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/domainName" }
+    },
+    "capture_routing": {
+      "type": "object",
+      "description": "Maps capture intent keys (idea, todo, meeting, ...) to a destination path. `default` is required.",
+      "required": ["default"],
+      "additionalProperties": { "$ref": "#/$defs/routeTarget" },
+      "properties": {
+        "default": { "$ref": "#/$defs/routeTarget" }
+      }
+    }
+  },
+  "$defs": {
+    "relPath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Vault-relative path. Must not start with '/' and must not contain '..' segments.",
+      "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+"
+    },
+    "layerEntry": {
+      "description": "Either a string (path shorthand) or an object with a required `path` and layer-specific options.",
+      "oneOf": [
+        { "$ref": "#/$defs/relPath" },
+        {
+          "type": "object",
+          "required": ["path"],
+          "additionalProperties": false,
+          "properties": {
+            "path":          { "$ref": "#/$defs/relPath" },
+            "format":        { "type": "string" },
+            "template":      { "$ref": "#/$defs/relPath" },
+            "status_field":  { "type": "string" },
+            "active_values": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "year_subfolder":{ "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "domainName": {
+      "type": "string",
+      "description": "Lowercase, kebab-case, singular. Used as the value of a `domain/*` tag.",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "minLength": 2,
+      "maxLength": 40
+    },
+    "routeTarget": {
+      "type": "string",
+      "description": "Destination for a captured entry. Trailing '/' indicates a folder (new file per capture). A bare path means append to that file. May include '#Anchor' to target a heading. Supports `{today}` substitution.",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+"
+    }
+  }
+}
