@@ -48,33 +48,33 @@ The spec is tool-agnostic: any editor that writes Markdown with YAML frontmatter
 
 ### 1. Layers
 
-A brainkeeper vault organizes content into exactly eight top-level layers. Each layer has a single purpose:
+A brainkeeper vault organizes content into exactly six top-level layers. Each layer has a single purpose:
 
-| Key         | Default path          | Purpose |
-|-------------|-----------------------|---------|
-| `inbox`     | `00 Inbox`            | Unprocessed capture. Notes live here until triaged. |
-| `journal`   | `10 Journal`          | Dated notes: dailies, meeting notes, session logs. |
-| `projects`  | `20 Projects`         | Outcomes with a defined end state. |
-| `areas`     | `30 Areas`            | Ongoing responsibilities without a finish line. |
-| `brain`     | `40 Brain`            | Evergreen knowledge: concepts, references, notes-on-notes. |
-| `system`    | `90 System`           | Meta: templates, archive, vault tooling. |
-| `archive`   | `90 System/Archive`   | Completed or retired content. Usually a child of `system`. |
-| `templates` | `90 System/Templates` | Template files for new notes. Usually a child of `system`. |
+| Key         | Default path    | Purpose |
+|-------------|-----------------|---------|
+| `inbox`     | `00 Inbox`      | Unprocessed capture. Notes live here until triaged. |
+| `journal`   | `10 Journal`    | Dated notes: dailies, meeting notes, session logs. |
+| `projects`  | `20 Projects`   | Outcomes with a defined end state. |
+| `areas`     | `30 Areas`      | Ongoing responsibilities without a finish line. |
+| `brain`     | `40 Brain`      | Evergreen knowledge: concepts, references, notes-on-notes. |
+| `archive`   | `90 Archive`    | Completed projects, preserved for history. See §12. |
 
-The keys are canonical. Paths are user-configurable in `brainkeeper.yaml` (see §5, §14). All eight keys MUST be present in the config; a vault that lacks, for example, a journal layer is out of scope for v1.
+The keys are canonical. Paths are user-configurable in `brainkeeper.yaml` (see §5, §14). All six keys MUST be present in the config; a vault that lacks, for example, a journal layer is out of scope for v1.
+
+Templates and other vault meta-files are not their own layers. Templates colocate inside the layer they serve (see §10).
 
 ### 2. Numbered prefixes
 
-The default paths use a Johnny Decimal-inspired numeric prefix convention: `00 Inbox`, `10 Journal`, `20 Projects`, `30 Areas`, `40 Brain`, `90 System`. Gaps (50, 60, 70, 80) are deliberate and reserved for user expansion; a tool-specific vault might add a `50 Media` or `70 Archive-Cold` layer outside of the standard keys.
+The default paths use a Johnny Decimal-inspired numeric prefix convention: `00 Inbox`, `10 Journal`, `20 Projects`, `30 Areas`, `40 Brain`, `90 Archive`. Gaps (50, 60, 70, 80) are deliberate and reserved for user expansion; a tool-specific vault might add a `50 Media` or `70 Reference` layer outside of the six canonical keys.
 
-Prefixes are a convention, not a requirement. A vault MAY use non-numeric names (see §5 and the `zettelkasten.yaml` example) as long as the eight layer keys map to valid relative paths.
+Prefixes are a convention, not a requirement. A vault MAY use non-numeric names (see §5 and the `zettelkasten.yaml` example) as long as the six layer keys map to valid relative paths.
 
 ### 3. Reserved paths
 
-A conforming vault MUST contain the eight layer directories at the configured paths. Tooling MAY auto-create any missing layer directory on startup. Two paths are additionally reserved:
+A conforming vault MUST contain the six layer directories at the configured paths. Tooling MAY auto-create any missing layer directory on startup. Two path conventions are additionally reserved:
 
 - **`<archive>/<YYYY>/`**. If the `archive` layer uses `year_subfolder: true` (default), tooling creates per-year subfolders on demand when archiving.
-- **`<templates>/`**. Reserved for template files referenced by layer entries or tooling (see §10).
+- **`<layer>/.templates/`**. Each layer that uses templates places them under a hidden `.templates/` subfolder (see §10). The dot-prefix hides the folder from Obsidian's sidebar and from shell globs.
 
 No other paths are reserved by this spec. Users remain free to create any subdirectory structure inside any layer.
 
@@ -220,15 +220,17 @@ Standard Markdown links (`[text](path.md)`) MUST NOT be used for internal refere
 
 ### 10. Template contract
 
-Templates live in the `templates` layer (default `90 System/Templates/`). Required templates:
+Templates colocate with the layer they serve. Each layer that uses templates places them inside a hidden `.templates/` subfolder:
 
-| File              | Purpose |
-|-------------------|---------|
-| `Daily.md`        | Template for daily journal notes. |
-| `Project.md`      | Template for new project notes. |
-| `Area Index.md`   | Template for area entry-point notes. |
-| `Idea.md`         | Template for captured ideas. |
-| `Meeting.md`      | Template for meeting notes. |
+| Path                               | Purpose |
+|------------------------------------|---------|
+| `<journal>/.templates/Daily.md`    | Template for daily journal notes. |
+| `<journal>/.templates/Meeting.md`  | Template for meeting notes. |
+| `<projects>/.templates/Project.md` | Template for new project notes. |
+| `<areas>/.templates/Area Index.md` | Template for area entry-point notes. |
+| `<areas>/.templates/Idea.md`       | Template for captured ideas. |
+
+The `.templates/` dot-folder is hidden from Obsidian's sidebar and from default shell globs. It moves automatically with the layer when the user renames a folder in `brainkeeper.yaml`, so bilingual and alternate-convention vaults need no additional config. Tooling MAY auto-create `.templates/` on demand.
 
 **Substitution.** Templates support simple `{{variable}}` substitution. Defined variables:
 
@@ -252,21 +254,22 @@ A new note with no obvious destination SHOULD be written to the `inbox` layer. T
 
 ### 12. Transition rules
 
-Only four layer-to-layer transitions are part of the standard:
+Only three layer-to-layer transitions are part of the standard:
 
 | From                    | To                        | Trigger |
 |-------------------------|---------------------------|---------|
 | `inbox`                 | any layer                 | Triage |
 | `areas/Ideas`           | `projects`                | Idea matures into a bounded outcome |
 | `projects`              | `archive/YYYY`            | Project completed or abandoned |
-| `areas/<Area>`          | `archive/YYYY`            | Area retired |
 
-On any transition, tools MUST:
-- Update `status` in frontmatter (see §13).
-- Set `archived: YYYY-MM-DD` when moving into the archive.
+On an archive transition, tools MUST:
+- Set `status` to `archived` in frontmatter (see §13).
+- Set `archived: YYYY-MM-DD` to today.
 - Preserve all other frontmatter fields unchanged.
 
-Other moves (e.g. `brain` to `archive`) are permitted but not blessed by the spec. Tools MAY refuse unknown transitions or require explicit user confirmation.
+**On retiring an area.** brainkeeper does not archive areas. An Area that becomes irrelevant SHOULD be either deleted outright or have its essential knowledge distilled into `brain/` before deletion. This keeps the archive layer narrow and semantically crisp: archive is a record of completed projects, not a catch-all for retired vault sections.
+
+Other moves (e.g. `brain` to `archive`) are not blessed by the spec. Tools MAY refuse unknown transitions or require explicit user confirmation.
 
 ### 13. Status semantics
 
@@ -295,18 +298,15 @@ layers:
   journal:
     path: "10 Journal"
     format: "YYYY-MM-DD.md"
-    template: "90 System/Templates/Daily.md"
   projects:
     path: "20 Projects"
     status_field: status
     active_values: ["active", "🟢"]
   areas: "30 Areas"
   brain: "40 Brain"
-  system: "90 System"
   archive:
-    path: "90 System/Archive"
+    path: "90 Archive"
     year_subfolder: true
-  templates: "90 System/Templates"
 
 domains:
   - freelance
@@ -326,7 +326,7 @@ capture_routing:
   default: "00 Inbox/"
 ```
 
-**Shorthand vs object form for layers.** Each layer entry accepts either a string (shorthand: path only) or an object (when the layer needs additional options: `format`, `template`, `status_field`, `active_values`, `year_subfolder`). The schema defines which options apply to which layers.
+**Shorthand vs object form for layers.** Each layer entry accepts either a string (shorthand: path only) or an object (when the layer needs additional options: `format`, `status_field`, `active_values`, `year_subfolder`). The schema defines which options apply to which layers.
 
 **Path rules.** Paths under `layers.*` are vault-relative. Leading `/` is invalid. `..` segments are invalid.
 
@@ -340,7 +340,7 @@ The following additions do NOT require a change to the spec or the schema. They 
 
 - Adding a new domain: append to `domains:`.
 - Adding a new capture route: add a key under `capture_routing:`.
-- Adding a new template: drop the file in the `templates` layer and reference it from a layer entry.
+- Adding a new template: drop a `.md` file into `<layer>/.templates/` inside the relevant layer.
 - Renaming any folder: change the corresponding path under `layers:`.
 
 Tooling SHOULD support live config reload: changes to `brainkeeper.yaml` should take effect without a restart. Notes whose domain tag was just added become valid; notes whose domain tag was just removed become orphans (see §7).
@@ -352,7 +352,7 @@ The spec is tool-agnostic. Nothing in Parts I to III depends on Obsidian. This s
 - **Wikilink syntax.** `[[Note Name]]` is Obsidian's native link style (§9).
 - **YAML frontmatter.** The Properties feature in Obsidian reads the same `---` front block (§6).
 - **Folder names.** Arbitrary strings; Obsidian imposes no folder naming rules beyond the OS filesystem.
-- **Templates.** The `{{date}}` / `{{title}}` variables map onto Obsidian's Templates core plugin. Users who prefer the Templater community plugin MAY use its richer syntax inside template files as long as the reserved variables keep their brainkeeper meaning.
+- **Templates.** The `{{date}}` / `{{title}}` variables map onto Obsidian's Templates core plugin. The `.templates/` dot-folder convention keeps templates out of the sidebar and search results. Users who prefer the Templater community plugin MAY use its richer syntax inside template files as long as the reserved variables keep their brainkeeper meaning.
 
 brainkeeper vaults work equally well in Logseq, Silverbullet, and plain-text editors, provided the editor preserves YAML frontmatter and does not rewrite wikilinks into Markdown links.
 
