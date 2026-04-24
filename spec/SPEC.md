@@ -106,7 +106,7 @@ layers:
 
 and the vault remains compliant. Tooling MUST reference layers by their canonical key (`layers.projects`) and never by a literal path string.
 
-This rule applies to all spec-reserved concepts: domains (§7), template file names (§10), status values (§13), and capture routes (§14) are user-configurable strings mapped through the config file.
+This rule applies to all spec-reserved concepts: template file names (§10), status values (§13), and capture routes (§14) are user-configurable strings mapped through the config file. Domain tag values (§7) derive from folder names under `projects/` and `areas/`, so renaming a folder renames the domain.
 
 
 ## Part II: Content model
@@ -161,12 +161,12 @@ brainkeeper uses a hierarchical tag grammar. Dimensions (prefixes) are prescribe
 
 **Prescribed dimensions:**
 
-| Prefix     | Cardinality | Required? | Value source |
-|------------|-------------|-----------|--------------|
-| `domain/`  | exactly 1   | yes       | Enum in `brainkeeper.yaml` (`domains:`). Editable. |
+| Prefix     | Cardinality | Required?   | Value source |
+|------------|-------------|-------------|--------------|
+| `domain/`  | 0..n        | recommended | Derived from folder names under `projects/` and `areas/` (see "Domain vocabulary" below). |
 | `topic/`   | 0..n        | recommended | Free (user-defined vocabulary). |
-| `project/` | 0..n        | only on notes related to a project | Free; SHOULD match a project folder slug. |
-| `person/`  | 0..n        | optional  | Free (meeting and 1-on-1 notes). |
+| `project/` | 0..n        | required on notes related to an active project | Free; SHOULD match a project folder slug. |
+| `person/`  | 0..n        | optional    | Free (meeting and 1-on-1 notes). |
 
 **Syntax rules:**
 
@@ -177,15 +177,32 @@ brainkeeper uses a hierarchical tag grammar. Dimensions (prefixes) are prescribe
 
   ```yaml
   tags:
+    - domain/fitizens
     - topic/mcp
     - project/brainkeeper
   ```
 
-- At least one tag is required on every managed note.
+- At least one tag of any dimension is required on every managed note (see §6).
 
 **Guiding principle.** Tag what the folder path does not already encode. A file under `20 Projects/Brainkeeper/` already implies `project/brainkeeper`; adding it is redundant but not wrong. A note in `40 Brain/` about the MCP protocol benefits from `topic/mcp` because `40 Brain/` alone does not convey it.
 
-**Domain tag grammar.** Values for `domain/*` MUST appear in the `domains:` list of `brainkeeper.yaml`. Domain names are lowercase kebab-case (regex: `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`, length 2 to 40). Adding a new domain is a one-line config edit (see §15).
+**Why domain tags.** Domains are the cross-cutting axis the folder tree cannot represent. Folders classify notes by *kind* (project, journal, knowledge); domains classify by *life area* (fitizens, teaching, family). A Brain note and a Journal entry can both carry `domain/fitizens`, supporting queries that span all six layers. Concrete uses:
+
+- **Per-domain filtering.** "All active notes in `domain/teaching`" crosses Projects, Journal, Areas, Brain.
+- **Context-aware capture.** Tooling or an agent can inject the active domain during note creation.
+- **Analytics.** Aggregate queries ("hours logged per domain this month") become natural.
+- **Agent routing.** Domain tags are the single most useful filter when an agent acts on a subset of the vault.
+
+**Domain vocabulary.** brainkeeper does NOT require a fixed domain list in `brainkeeper.yaml`. The vocabulary is derived from folder structure:
+
+- A direct subfolder of `projects/` at path `projects/<Name>/` yields a valid domain value `kebab-case(<Name>)`.
+- A direct subfolder of `areas/` at path `areas/<Name>/` yields a valid domain value `kebab-case(<Name>)`.
+
+Kebab-case conversion lowercases the name, replaces whitespace runs with a single `-`, and strips characters outside `[a-z0-9-]`. `Fitizens` becomes `fitizens`; `Home Lab` becomes `home-lab`; `AI Research` becomes `ai-research`.
+
+Tooling and LLM-driven capture SHOULD infer the domain tag from the destination folder path or from content context, preferring existing domains (folders that already exist) over inventing new values. Creating a new domain is equivalent to creating a new top-level subfolder under `projects/` or `areas/`. Renaming a folder renames the domain from that point forward; historical tags continue to refer to the old value.
+
+**Domain tag grammar.** Domain values MUST be lowercase kebab-case (regex: `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`, length 2 to 40). Tooling SHOULD reject tags that fail this pattern. Tooling SHOULD NOT reject a tag solely for not appearing in a prior enum, since the vocabulary is implicit and evolves with the folder tree.
 
 
 ### 8. Naming conventions
@@ -308,17 +325,6 @@ layers:
     path: "90 Archive"
     year_subfolder: true
 
-domains:
-  - freelance
-  - fitizens
-  - learning
-  - teaching
-  - content
-  - personal
-  - family
-  - homelab
-  - ideas
-
 capture_routing:
   idea:    "30 Areas/Ideas/Inbox.md"
   todo:    "00 Inbox/Todos.md"
@@ -338,12 +344,12 @@ capture_routing:
 
 The following additions do NOT require a change to the spec or the schema. They are expressible in config alone:
 
-- Adding a new domain: append to `domains:`.
+- Adding a new domain: create a folder under `projects/` or `areas/` with the domain name in Title Case. Tooling derives the `domain/<kebab-case>` tag value from the folder name.
 - Adding a new capture route: add a key under `capture_routing:`.
 - Adding a new template: drop a `.md` file into `<layer>/.templates/` inside the relevant layer.
 - Renaming any folder: change the corresponding path under `layers:`.
 
-Tooling SHOULD support live config reload: changes to `brainkeeper.yaml` should take effect without a restart. Notes whose domain tag was just added become valid; notes whose domain tag was just removed become orphans (see §7).
+Tooling SHOULD support live config reload: changes to `brainkeeper.yaml` should take effect without a restart. Domain tag values reflect current folder structure; deleting a domain folder does not invalidate historical tags but new captures SHOULD NOT reuse the removed value.
 
 ### 16. Obsidian compatibility notes
 
