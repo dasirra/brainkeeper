@@ -84,7 +84,7 @@ Within the `areas` layer, users MAY create arbitrary subdirectories to organize 
 
 ```
 30 Areas/
-├── Finanzas/
+├── Finance/
 ├── Pipeline/
 ├── Portfolio/
 └── Research/
