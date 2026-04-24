@@ -4,14 +4,16 @@ A formal spec for structured, PARA-inspired Second Brain vaults, plus a Python M
 
 ## Status
 
-Pre-v1.0. Design complete. Implementation starts 2026-04-27.
+**Spec v0.1.0** (2026-04-24). Published, first public draft. See [`CHANGELOG.md`](./CHANGELOG.md).
+
+**`brainkeeper-mcp`**: not yet released. Implementation starts after the spec is stable.
 
 ## What this is
 
 Two linked deliverables in one monorepo:
 
-1. **The brainkeeper spec** — a public standard for structured Second Brain vaults. PARA-inspired, extended with Journal, System, numbered prefixes, hierarchical tags, and an explicit frontmatter contract. Tool-agnostic (works with any Markdown + YAML frontmatter vault).
-2. **brainkeeper-mcp** — a Python MCP server that reads a `brainkeeper.yaml` config from a vault and enforces the spec through typed tool calls. Ships on PyPI, runs via `uvx`.
+1. **The brainkeeper spec**: a public standard for structured Second Brain vaults. PARA-inspired, extended with Journal, System, numbered prefixes, hierarchical tags, and an explicit frontmatter contract. Tool-agnostic (works with any Markdown + YAML frontmatter vault).
+2. **brainkeeper-mcp**: a Python MCP server that reads a `brainkeeper.yaml` config from a vault and enforces the spec through typed tool calls. Ships on PyPI, runs via `uvx`.
 
 ## Why
 
@@ -23,12 +25,23 @@ brainkeeper formalizes the shape of a well-organized vault as a schema, then shi
 
 ```
 brainkeeper/
-├── spec/       # the brainkeeper standard (SPEC.md, JSON schema, examples)
-├── mcp/        # brainkeeper-mcp Python package
-└── docs/       # design docs, articles, reference material
+├── spec/                  # the brainkeeper standard
+│   ├── SPEC.md            # canonical spec (v0.1.0)
+│   ├── schema/            # JSON Schema for brainkeeper.yaml
+│   └── examples/          # reference configs (validated against the schema)
+├── mcp/                   # brainkeeper-mcp Python package (forthcoming)
+└── docs/                  # design docs, plans, articles
 ```
 
-`spec/` and `mcp/` will be populated as implementation progresses.
+## Validate your config
+
+Drop a `brainkeeper.yaml` at your vault root. Validate it:
+
+```bash
+uvx check-jsonschema --schemafile spec/schema/brainkeeper.schema.json path/to/brainkeeper.yaml
+```
+
+Start from one of the [reference configs](./spec/examples/).
 
 ## Design
 
@@ -49,4 +62,4 @@ Target v1.0: **2026-05-15**.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT. See [LICENSE](./LICENSE).
