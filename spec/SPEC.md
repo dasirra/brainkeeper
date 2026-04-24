@@ -108,3 +108,49 @@ and the vault remains compliant. Tooling MUST reference layers by their canonica
 
 This rule applies to all spec-reserved concepts: domains (§7), template file names (§10), status values (§13), and capture routes (§14) are user-configurable strings mapped through the config file.
 
+
+## Part II: Content model
+
+### 6. Frontmatter contract
+
+Every **managed note** MUST begin with a YAML frontmatter block delimited by `---` lines. Minimum required fields:
+
+```yaml
+---
+type: project
+status: active
+created: 2026-04-24
+tags:
+  - topic/mcp
+  - project/brainkeeper
+---
+```
+
+**Required fields:**
+
+| Field     | Type           | Allowed values |
+|-----------|----------------|----------------|
+| `type`    | string         | `project`, `area`, `idea`, `journal`, `meeting`, `note`, `resource`, `knowledge` |
+| `status`  | string         | `active`, `paused`, `completed`, `archived` |
+| `created` | `YYYY-MM-DD`   | ISO date, never empty |
+| `tags`    | list of string | At least one tag. See §7. |
+
+**Optional fields:**
+
+| Field      | Type         | Notes |
+|------------|--------------|-------|
+| `deadline` | `YYYY-MM-DD` | Target completion date (projects). |
+| `archived` | `YYYY-MM-DD` or `null` | Set to today when the note is archived; `null` otherwise. |
+
+**Extension rule.** Additional fields beyond the ones above are permitted and ignored by the spec. Tooling SHOULD pass unknown fields through unchanged on write (read-modify-write preserves user fields).
+
+**Type semantics (non-normative).**
+- `project`. Has a defined end state. Lives in the `projects` layer.
+- `area`. Ongoing responsibility. Lives in the `areas` layer.
+- `idea`. A capture that may promote to a project. Lives in `areas` or `inbox`.
+- `journal`. Dated daily note. Lives in `journal`.
+- `meeting`. Dated meeting note. Lives in `journal` (separate file, linked from the day's journal).
+- `note`. Freeform capture, no stronger semantics.
+- `resource`. External reference (article, video, PDF annotation).
+- `knowledge`. Evergreen note in `brain`.
+
