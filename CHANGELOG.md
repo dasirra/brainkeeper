@@ -16,5 +16,7 @@ Two artifacts are versioned independently:
 - JSON Schema for `brainkeeper.yaml` (`spec/schema/brainkeeper.schema.json`).
 - Three reference configs: `minimal.yaml`, `daniels-vault.yaml`, `zettelkasten.yaml`.
 - Negative-test fixtures under `spec/examples/.invalid/`.
+- Six-layer structural model (`inbox`, `journal`, `projects`, `areas`, `brain`, `archive`) with colocated per-layer templates under `<layer>/.templates/`.
+- Archive semantics narrowed to completed projects only; retired Areas are deleted or distilled into Brain, not archived.
 
 [spec-v0.1.0]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.1.0
