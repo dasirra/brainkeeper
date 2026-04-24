@@ -154,3 +154,36 @@ tags:
 - `resource`. External reference (article, video, PDF annotation).
 - `knowledge`. Evergreen note in `brain`.
 
+
+### 7. Tag taxonomy
+
+brainkeeper uses a hierarchical tag grammar. Dimensions (prefixes) are prescribed; values are open.
+
+**Prescribed dimensions:**
+
+| Prefix     | Cardinality | Required? | Value source |
+|------------|-------------|-----------|--------------|
+| `domain/`  | exactly 1   | yes       | Enum in `brainkeeper.yaml` (`domains:`). Editable. |
+| `topic/`   | 0..n        | recommended | Free (user-defined vocabulary). |
+| `project/` | 0..n        | only on notes related to a project | Free; SHOULD match a project folder slug. |
+| `person/`  | 0..n        | optional  | Free (meeting and 1-on-1 notes). |
+
+**Syntax rules:**
+
+- Lowercase only.
+- Kebab-case (words joined by `-`).
+- Singular form (`person/daniel`, not `people/daniels`).
+- YAML list form. The `#` prefix is NOT included in the YAML value:
+
+  ```yaml
+  tags:
+    - topic/mcp
+    - project/brainkeeper
+  ```
+
+- At least one tag is required on every managed note.
+
+**Guiding principle.** Tag what the folder path does not already encode. A file under `20 Projects/Brainkeeper/` already implies `project/brainkeeper`; adding it is redundant but not wrong. A note in `40 Brain/` about the MCP protocol benefits from `topic/mcp` because `40 Brain/` alone does not convey it.
+
+**Domain tag grammar.** Values for `domain/*` MUST appear in the `domains:` list of `brainkeeper.yaml`. Domain names are lowercase kebab-case (regex: `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`, length 2 to 40). Adding a new domain is a one-line config edit (see §15).
+
