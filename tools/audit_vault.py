@@ -51,6 +51,8 @@ _LEADING_DIGIT = re.compile(r"^\d")
 _WIKILINK_RE = re.compile(r"\[\[[^\]]+\]\]")
 _INTERNAL_MD_LINK_RE = re.compile(r"\]\((?!https?://|mailto:)[^)]+\.md(?:#[^)]*)?\)")
 _TAG_RE = re.compile(r"^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)*$")
+_MD_LINK_TARGET_RE = re.compile(r"\]\(([^)]+)\)")
+_WIKI_INNER_RE = re.compile(r"\[\[([^\]]+)\]\]")
 
 
 @dataclass
@@ -466,16 +468,291 @@ def check_tags(vault: Path) -> Check:
     return Check("Tag grammar", headline, "\n".join(lines))
 
 
+def _find_archive(vault: Path) -> Path | None:
+    """Return the archive folder. Falls back to any nested `Archive/` if not top-level."""
+    mappings = _layer_mappings(vault)
+    if "archive" in mappings:
+        return mappings["archive"]
+    for d in _iter_top_level_dirs(vault):
+        try:
+            for child in d.iterdir():
+                if child.is_dir() and child.name.lower() == "archive":
+                    return child
+        except (PermissionError, OSError):
+            continue
+    return None
+
+
+def _is_project_folder(d: Path) -> bool:
+    """A directory is a 'project folder' if any .md inside declares `type: project`."""
+    try:
+        for f in d.rglob("*.md"):
+            if any(part.startswith(".") for part in f.relative_to(d).parts):
+                continue
+            meta = _load_frontmatter(f)
+            if meta and str(meta.get("type") or "").lower() == "project":
+                return True
+    except (PermissionError, OSError):
+        pass
+    return False
+
+
 def check_archive(vault: Path) -> Check:
-    return Check("Archive scope", "_(not implemented)_", "")
+    """Classify immediate archive contents: project folders vs 'other'."""
+    archive = _find_archive(vault)
+    if archive is None:
+        return Check(
+            "Archive scope",
+            "_No archive folder found (canonical `archive` missing)._ ",
+            "",
+        )
+
+    loose_files: list[Path] = []
+    year_folders: list[Path] = []
+    project_folders: list[Path] = []
+    other_folders: list[Path] = []
+
+    def _classify_subtree(root: Path, target_years_ok: bool) -> None:
+        for child in sorted(root.iterdir()):
+            if child.name.startswith("."):
+                continue
+            if child.is_file() and child.suffix == ".md":
+                loose_files.append(child)
+            elif child.is_dir():
+                if target_years_ok and re.fullmatch(r"\d{4}", child.name):
+                    year_folders.append(child)
+                    _classify_subtree(child, target_years_ok=False)
+                elif _is_project_folder(child):
+                    project_folders.append(child)
+                else:
+                    other_folders.append(child)
+
+    _classify_subtree(archive, target_years_ok=True)
+
+    total = len(project_folders) + len(other_folders) + len(loose_files)
+    if total == 0:
+        return Check(
+            "Archive scope",
+            f"_Archive at `{archive.relative_to(vault)}/` is empty._",
+            "",
+        )
+
+    pct = 100.0 * len(project_folders) / total if total else 0
+    headline = (
+        f"**Archive: {len(project_folders)} project folders, "
+        f"{len(other_folders)} other folders, "
+        f"{len(loose_files)} loose .md files** "
+        f"({pct:.0f}% project-shaped). "
+        f"Year subfolders: {len(year_folders)}."
+    )
+
+    lines: list[str] = []
+    if other_folders:
+        lines.append(f"**'Other' folders (likely not projects) ({len(other_folders)}):**")
+        lines.append("")
+        for p in other_folders[:20]:
+            lines.append(f"- `{p.relative_to(vault)}/`")
+        if len(other_folders) > 20:
+            lines.append(f"- _... {len(other_folders) - 20} more_")
+    if loose_files:
+        if lines:
+            lines.append("")
+        lines.append(f"**Loose .md files directly under archive ({len(loose_files)}):**")
+        lines.append("")
+        for p in loose_files[:20]:
+            lines.append(f"- `{p.relative_to(vault)}`")
+        if len(loose_files) > 20:
+            lines.append(f"- _... {len(loose_files) - 20} more_")
+
+    return Check("Archive scope", headline, "\n".join(lines))
 
 
 def check_templates(vault: Path) -> Check:
-    return Check("Templates", "_(not implemented)_", "")
+    """Locate template folders; classify as colocated `.templates/` vs legacy."""
+    mapping_paths = {p.name for p in _layer_mappings(vault).values()}
+    colocated: list[Path] = []
+    legacy: list[Path] = []
+    loose_files: list[Path] = []
+
+    # Walk explicitly; rglob doesn't enter hidden dirs consistently across versions.
+    stack: list[Path] = [vault]
+    while stack:
+        current = stack.pop()
+        try:
+            entries = list(current.iterdir())
+        except (PermissionError, OSError):
+            continue
+        for p in entries:
+            name = p.name
+            rel_parts = p.relative_to(vault).parts
+            if p.is_dir():
+                if name == ".templates":
+                    if len(rel_parts) == 2 and rel_parts[0] in mapping_paths:
+                        colocated.append(p)
+                    else:
+                        legacy.append(p)
+                    continue
+                if name.lower() == "templates":
+                    legacy.append(p)
+                    continue
+                if name.startswith(".") and name != ".templates":
+                    continue
+                stack.append(p)
+            elif p.is_file() and p.suffix == ".md" and "template" in name.lower():
+                loose_files.append(p)
+
+    total = len(colocated) + len(legacy) + len(loose_files)
+    if total == 0:
+        return Check("Templates", "_No template folders or files detected._", "")
+
+    headline = (
+        f"**Templates: {len(colocated)} colocated `.templates/`, "
+        f"{len(legacy)} legacy locations, "
+        f"{len(loose_files)} loose template files.**"
+    )
+
+    lines: list[str] = []
+    if colocated:
+        lines.append("**Colocated (spec-compliant):**")
+        lines.append("")
+        for d in sorted(colocated):
+            lines.append(f"- `{d.relative_to(vault)}/`")
+    if legacy:
+        if lines:
+            lines.append("")
+        lines.append("**Legacy template locations (should migrate to `<layer>/.templates/`):**")
+        lines.append("")
+        for d in sorted(legacy):
+            lines.append(f"- `{d.relative_to(vault)}/`")
+    if loose_files:
+        if lines:
+            lines.append("")
+        lines.append(f"**Loose template files ({len(loose_files)}):**")
+        lines.append("")
+        for f in sorted(loose_files)[:20]:
+            lines.append(f"- `{f.relative_to(vault)}`")
+        if len(loose_files) > 20:
+            lines.append(f"- _... {len(loose_files) - 20} more_")
+
+    return Check("Templates", headline, "\n".join(lines))
+
+
+def _collect_referenced_names(vault: Path) -> set[str]:
+    """Collect basenames referenced by any wikilink or markdown link."""
+    names: set[str] = set()
+    for f in _iter_markdown_files(vault):
+        try:
+            content = f.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        for m in _MD_LINK_TARGET_RE.finditer(content):
+            target = m.group(1).strip()
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+            base = target.split("#", 1)[0].rstrip()
+            base = base.rsplit("/", 1)[-1].rsplit("\\", 1)[-1].strip()
+            if base:
+                names.add(base)
+        for m in _WIKI_INNER_RE.finditer(content):
+            inner = m.group(1).split("|", 1)[0].split("#", 1)[0]
+            base = inner.rsplit("/", 1)[-1].strip()
+            if base:
+                names.add(base)
+                if "." not in base:
+                    names.add(f"{base}.md")
+    return names
+
+
+def _is_empty_dir(d: Path) -> bool:
+    try:
+        for p in d.rglob("*"):
+            if p.is_file() and not p.name.startswith("."):
+                return False
+    except (PermissionError, OSError):
+        return False
+    return True
 
 
 def check_cruft(vault: Path) -> Check:
-    return Check("Cruft", "_(not implemented)_", "")
+    """Surface empty folders, .DS_Store files, and likely-orphan attachments."""
+    ds_store: list[Path] = []
+    for p in vault.rglob(".DS_Store"):
+        ds_store.append(p)
+
+    empty_dirs: list[Path] = []
+    stack: list[Path] = [vault]
+    while stack:
+        current = stack.pop()
+        try:
+            for p in current.iterdir():
+                if not p.is_dir():
+                    continue
+                if p.name.startswith("."):
+                    continue
+                if _is_empty_dir(p):
+                    empty_dirs.append(p)
+                else:
+                    stack.append(p)
+        except (PermissionError, OSError):
+            continue
+
+    referenced = _collect_referenced_names(vault)
+    orphans: list[Path] = []
+    for f in vault.rglob("*"):
+        if not f.is_file():
+            continue
+        rel_parts = f.relative_to(vault).parts
+        if any(part.startswith(".") for part in rel_parts):
+            continue
+        if f.suffix.lower() == ".md":
+            continue
+        if f.name == ".DS_Store":
+            continue
+        if f.name in referenced:
+            continue
+        orphans.append(f)
+
+    total = len(ds_store) + len(empty_dirs) + len(orphans)
+    if total == 0:
+        return Check("Cruft", "**No cruft detected.**", "")
+
+    headline = (
+        f"**Cruft: {len(ds_store)} `.DS_Store`, "
+        f"{len(empty_dirs)} empty folders, "
+        f"{len(orphans)} possibly-orphan attachments** (basename match, approximate)."
+    )
+
+    lines: list[str] = []
+    if ds_store:
+        lines.append(f"**`.DS_Store` files ({len(ds_store)}):**")
+        lines.append("")
+        for p in ds_store[:10]:
+            lines.append(f"- `{p.relative_to(vault)}`")
+        if len(ds_store) > 10:
+            lines.append(f"- _... {len(ds_store) - 10} more_")
+    if empty_dirs:
+        if lines:
+            lines.append("")
+        lines.append(f"**Empty folders ({len(empty_dirs)}):**")
+        lines.append("")
+        for p in sorted(empty_dirs)[:20]:
+            lines.append(f"- `{p.relative_to(vault)}/`")
+        if len(empty_dirs) > 20:
+            lines.append(f"- _... {len(empty_dirs) - 20} more_")
+    if orphans:
+        if lines:
+            lines.append("")
+        lines.append(
+            f"**Possibly-orphan attachments ({len(orphans)}), "
+            f"basename-only reference check:**"
+        )
+        lines.append("")
+        for p in sorted(orphans)[:20]:
+            lines.append(f"- `{p.relative_to(vault)}`")
+        if len(orphans) > 20:
+            lines.append(f"- _... {len(orphans) - 20} more_")
+
+    return Check("Cruft", headline, "\n".join(lines))
 
 
 CHECKS: tuple = (
