@@ -56,3 +56,27 @@ def test_get_template_search_all_layers(srv, minimal_vault):
 def test_get_template_missing(srv):
     with pytest.raises(FileNotFoundError):
         _call(srv, "get_template", name="Nonexistent")
+
+
+def test_list_domains_from_folders(srv, minimal_vault):
+    (minimal_vault / "20 Projects" / "Brainkeeper").mkdir()
+    (minimal_vault / "20 Projects" / "Fitizens").mkdir()
+    (minimal_vault / "30 Areas" / "Home Lab").mkdir()
+    out = _call(srv, "list_domains")
+    names = {d["name"] for d in out}
+    assert "brainkeeper" in names
+    assert "fitizens" in names
+    assert "home-lab" in names
+
+
+def test_list_domains_empty_when_no_subfolders(srv):
+    out = _call(srv, "list_domains")
+    assert out == []
+
+
+def test_list_domains_skips_dot_dirs(srv, minimal_vault):
+    (minimal_vault / "20 Projects" / ".templates").mkdir()
+    (minimal_vault / "20 Projects" / "Real").mkdir()
+    out = _call(srv, "list_domains")
+    names = {d["name"] for d in out}
+    assert names == {"real"}
