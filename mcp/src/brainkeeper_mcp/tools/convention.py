@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
@@ -13,6 +15,23 @@ if TYPE_CHECKING:
 
 
 CANONICAL_KEYS = ("inbox", "journal", "projects", "areas", "brain", "archive")
+
+_VAR_RE = re.compile(r"\{\{[^}]+\}\}")
+
+
+def _find_template(srv: "BrainkeeperServer", name: str, layer: str | None) -> Path:
+    candidates = [name, f"{name}.md"]
+    layers = [layer] if layer else list(CANONICAL_KEYS)
+    for lk in layers:
+        layer_dir = srv.config.layer_path(lk)
+        templates_dir = layer_dir / ".templates"
+        if not templates_dir.is_dir():
+            continue
+        for cand in candidates:
+            target = templates_dir / cand
+            if target.is_file():
+                return target
+    raise FileNotFoundError(f"template '{name}' not found under any layer")
 
 
 def register_convention(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
@@ -35,3 +54,16 @@ def register_convention(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
             }
             out.append({"key": key, "path": opts.path, "options": options})
         return out
+
+    @mcp.tool()
+    def get_template(name: str, layer: str | None = None) -> dict[str, Any]:
+        """Locate a template. Searches `<layer>/.templates/` for the canonical layers."""
+        path = _find_template(srv, name, layer)
+        content = path.read_text(encoding="utf-8")
+        variables = sorted(set(_VAR_RE.findall(content)))
+        return {
+            "name": path.name,
+            "path": str(path.relative_to(srv.vault)),
+            "content": content,
+            "variables": variables,
+        }

@@ -33,3 +33,26 @@ def test_list_layers(srv):
     journal = next(layer for layer in out if layer["key"] == "journal")
     assert journal["path"] == "10 Journal"
     assert journal["options"].get("format") == "YYYY-MM-DD.md"
+
+
+def test_get_template_with_layer(srv, minimal_vault):
+    tdir = minimal_vault / "10 Journal" / ".templates"
+    tdir.mkdir(parents=True, exist_ok=True)
+    (tdir / "Daily.md").write_text("# {{today}}\n")
+    out = _call(srv, "get_template", name="Daily", layer="journal")
+    assert out["name"] == "Daily.md"
+    assert "{{today}}" in out["content"]
+    assert "{{today}}" in out["variables"]
+
+
+def test_get_template_search_all_layers(srv, minimal_vault):
+    tdir = minimal_vault / "20 Projects" / ".templates"
+    tdir.mkdir(parents=True, exist_ok=True)
+    (tdir / "Project.md").write_text("# {{title}}\n")
+    out = _call(srv, "get_template", name="Project")
+    assert out["name"] == "Project.md"
+
+
+def test_get_template_missing(srv):
+    with pytest.raises(FileNotFoundError):
+        _call(srv, "get_template", name="Nonexistent")
