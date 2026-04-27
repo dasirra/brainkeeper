@@ -208,3 +208,6 @@ __marimo__/
 
 # brainkeeper vault audit reports (contain vault paths, keep local)
 /vault-audit-*.md
+
+# Local MCP server config (contains absolute paths, keep local)
+.mcp.json
