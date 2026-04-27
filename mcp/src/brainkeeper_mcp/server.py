@@ -24,11 +24,9 @@ class BrainkeeperServer:
         self.watcher = FileWatcher(self.vault, self.index)
         self.rescanner = PeriodicRescanner(self.vault, self.index)
         self.mcp = FastMCP("brainkeeper")
-        # Tool registration happens in later tasks:
-        # from .tools.primitives import register_primitives
-        # from .tools.convention import register_convention
-        # register_primitives(self.mcp, self)
-        # register_convention(self.mcp, self)
+        from .tools.primitives import register_primitives
+        register_primitives(self.mcp, self)
+        # Convention tools registered in Task 11+
 
     def start_infrastructure(self) -> None:
         self.index.build()
