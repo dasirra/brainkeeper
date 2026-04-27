@@ -50,7 +50,7 @@ _MEETING_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2} - .+\.md$")
 _LEADING_DIGIT = re.compile(r"^\d")
 _WIKILINK_RE = re.compile(r"\[\[[^\]]+\]\]")
 _INTERNAL_MD_LINK_RE = re.compile(r"\]\((?!https?://|mailto:)[^)]+\.md(?:#[^)]*)?\)")
-_TAG_RE = re.compile(r"^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)*$")
+_TAG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$")
 _MD_LINK_TARGET_RE = re.compile(r"\]\(([^)]+)\)")
 _WIKI_INNER_RE = re.compile(r"\[\[([^\]]+)\]\]")
 
@@ -587,7 +587,7 @@ def check_templates(vault: Path) -> Check:
             rel_parts = p.relative_to(vault).parts
             if p.is_dir():
                 if name == ".templates":
-                    if len(rel_parts) == 2 and rel_parts[0] in mapping_paths:
+                    if rel_parts and rel_parts[0] in mapping_paths:
                         colocated.append(p)
                     else:
                         legacy.append(p)
