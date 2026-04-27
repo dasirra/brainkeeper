@@ -54,3 +54,38 @@ def test_list_notes_with_frontmatter(srv, minimal_vault):
     out = _call(srv, "list_notes", glob="40 Brain/**/*.md", with_frontmatter=True)
     [item] = out
     assert item["frontmatter"]["type"] == "knowledge"
+
+
+def test_write_creates_new(srv, minimal_vault):
+    out = _call(
+        srv, "write_note_atomic",
+        path="40 Brain/new.md",
+        content="hello",
+        frontmatter={"type": "knowledge", "status": "active", "created": "2026-04-27", "tags": ["topic/x"]},
+    )
+    assert out["created"] is True
+    assert (minimal_vault / "40 Brain" / "new.md").exists()
+
+
+def test_write_with_correct_mtime(srv, minimal_vault):
+    n = minimal_vault / "40 Brain" / "u.md"
+    n.write_text("---\ntype: knowledge\nstatus: active\ncreated: 2026-04-27\ntags: [t/x]\n---\nold")
+    srv.index.update(n)
+    cur = n.stat().st_mtime
+    out = _call(
+        srv, "write_note_atomic",
+        path="40 Brain/u.md", content="new",
+        expected_mtime=cur,
+    )
+    assert out["created"] is False
+    assert "new" in n.read_text()
+
+
+def test_write_stale_mtime_rejected(srv, minimal_vault):
+    from brainkeeper_mcp.fs import StaleWriteError
+    n = minimal_vault / "40 Brain" / "u.md"
+    n.write_text("---\ntype: knowledge\nstatus: active\ncreated: 2026-04-27\ntags: [t/x]\n---\nold")
+    srv.index.update(n)
+    with pytest.raises(StaleWriteError):
+        _call(srv, "write_note_atomic",
+              path="40 Brain/u.md", content="new", expected_mtime=0.0)

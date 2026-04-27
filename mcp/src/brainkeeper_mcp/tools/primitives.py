@@ -66,3 +66,23 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
                     entry["frontmatter"] = {}
             out.append(entry)
         return out
+
+    @mcp.tool()
+    def write_note_atomic(
+        path: str,
+        content: str,
+        frontmatter: dict[str, Any] | None = None,
+        expected_mtime: float | None = None,
+    ) -> dict[str, Any]:
+        """Atomic write of a note. expected_mtime guards against concurrent writes."""
+        p = _resolve(srv, path)
+        created = not p.exists()
+        if frontmatter:
+            import yaml
+            fm_text = yaml.safe_dump(frontmatter, sort_keys=False).rstrip()
+            full = f"---\n{fm_text}\n---\n{content}"
+        else:
+            full = content
+        mtime = srv.writer.write_atomic(p, full, expected_mtime=expected_mtime)
+        srv.index.update(p)
+        return {"path": _rel(srv, p), "mtime": mtime, "created": created}
