@@ -26,7 +26,8 @@ class BrainkeeperServer:
         self.mcp = FastMCP("brainkeeper")
         from .tools.primitives import register_primitives
         register_primitives(self.mcp, self)
-        # Convention tools registered in Task 11+
+        from .tools.convention import register_convention
+        register_convention(self.mcp, self)
 
     def start_infrastructure(self) -> None:
         self.index.build()
