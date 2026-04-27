@@ -1,0 +1,14 @@
+layers:
+  inbox: "00 Inbox"
+  journal:
+    path: "10 Journal"
+    format: "YYYY-MM-DD.md"
+  projects: "20 Projects"
+  areas: "30 Areas"
+  brain: "40 Brain"
+  archive:
+    path: "90 Archive"
+    year_subfolder: true
+
+capture_routing:
+  default: "00 Inbox/"
