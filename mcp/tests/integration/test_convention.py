@@ -80,3 +80,33 @@ def test_list_domains_skips_dot_dirs(srv, minimal_vault):
     out = _call(srv, "list_domains")
     names = {d["name"] for d in out}
     assert names == {"real"}
+
+
+def test_resolve_path_with_intent(srv, minimal_vault):
+    srv.config.capture_routing["idea"] = "30 Areas/Ideas/Inbox.md"
+    out = _call(srv, "resolve_path", intent="idea")
+    assert out["path"] == "30 Areas/Ideas/Inbox.md"
+    assert out["mode"] == "append"
+    assert out["anchor"] is None
+
+
+def test_resolve_path_fallback_to_default(srv):
+    out = _call(srv, "resolve_path", intent="unknown")
+    assert out["path"] == "00 Inbox/"
+    assert out["mode"] == "create"
+
+
+def test_resolve_path_anchor(srv):
+    srv.config.capture_routing["meeting"] = "10 Journal/{today}.md#Meetings"
+    out = _call(srv, "resolve_path", intent="meeting")
+    assert out["anchor"] == "Meetings"
+    assert out["mode"] == "append"
+    from datetime import date
+    assert date.today().isoformat() in out["path"]
+
+
+def test_resolve_path_today_substitution(srv):
+    srv.config.capture_routing["daily"] = "10 Journal/{today}.md"
+    out = _call(srv, "resolve_path", intent="daily")
+    from datetime import date
+    assert out["path"].endswith(f"{date.today().isoformat()}.md")
