@@ -89,3 +89,37 @@ def test_write_stale_mtime_rejected(srv, minimal_vault):
     with pytest.raises(StaleWriteError):
         _call(srv, "write_note_atomic",
               path="40 Brain/u.md", content="new", expected_mtime=0.0)
+
+
+def test_move_note(srv, minimal_vault):
+    n = minimal_vault / "00 Inbox" / "x.md"
+    n.write_text("---\ntype: note\nstatus: active\ncreated: 2026-04-27\ntags: [t/x]\n---\nx")
+    srv.index.update(n)
+    out = _call(srv, "move_note", src="00 Inbox/x.md", dst="40 Brain/x.md")
+    assert not n.exists()
+    assert (minimal_vault / "40 Brain" / "x.md").exists()
+    assert out["from"] == "00 Inbox/x.md"
+    assert out["to"] == "40 Brain/x.md"
+    assert out["wikilinks_broken"] == []
+
+
+def test_delete_note_soft_moves_to_archive_year(srv, minimal_vault):
+    from datetime import date
+    n = minimal_vault / "20 Projects" / "old.md"
+    n.write_text("---\ntype: project\nstatus: completed\ncreated: 2024-01-01\ntags: [p/old]\n---\n")
+    srv.index.update(n)
+    out = _call(srv, "delete_note", path="20 Projects/old.md", soft=True)
+    assert not n.exists()
+    yr = str(date.today().year)
+    moved = minimal_vault / "90 Archive" / yr / "old.md"
+    assert moved.exists()
+    assert out["destination"] == f"90 Archive/{yr}/old.md"
+
+
+def test_delete_note_hard_unlinks(srv, minimal_vault):
+    n = minimal_vault / "00 Inbox" / "trash.md"
+    n.write_text("trash")
+    srv.index.update(n)
+    out = _call(srv, "delete_note", path="00 Inbox/trash.md", soft=False)
+    assert not n.exists()
+    assert out["destination"] is None

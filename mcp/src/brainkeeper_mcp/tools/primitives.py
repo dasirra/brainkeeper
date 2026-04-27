@@ -86,3 +86,43 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
         mtime = srv.writer.write_atomic(p, full, expected_mtime=expected_mtime)
         srv.index.update(p)
         return {"path": _rel(srv, p), "mtime": mtime, "created": created}
+
+    @mcp.tool()
+    def move_note(src: str, dst: str) -> dict[str, Any]:
+        """Move a note. v1 does NOT rewrite wikilinks."""
+        s = _resolve(srv, src)
+        d = _resolve(srv, dst)
+        if not s.is_file():
+            raise FileNotFoundError(src)
+        d.parent.mkdir(parents=True, exist_ok=True)
+        s.replace(d)
+        srv.index.remove(s)
+        srv.index.update(d)
+        return {
+            "from": _rel(srv, s),
+            "to": _rel(srv, d),
+            "wikilinks_broken": [],
+        }
+
+    @mcp.tool()
+    def delete_note(path: str, soft: bool = True) -> dict[str, Any]:
+        """Delete a note. soft=True moves to <archive>/<YYYY>/."""
+        from datetime import date
+        p = _resolve(srv, path)
+        if not p.is_file():
+            raise FileNotFoundError(path)
+        if soft:
+            archive_dir = srv.config.layer_path("archive")
+            opts = srv.config.layers.archive
+            if opts.year_subfolder:
+                archive_dir = archive_dir / str(date.today().year)
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            target = archive_dir / p.name
+            p.replace(target)
+            srv.index.remove(p)
+            srv.index.update(target)
+            return {"path": _rel(srv, p), "destination": _rel(srv, target)}
+        else:
+            p.unlink()
+            srv.index.remove(p)
+            return {"path": _rel(srv, p), "destination": None}
