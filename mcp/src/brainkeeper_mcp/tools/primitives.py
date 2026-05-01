@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import frontmatter
+import yaml
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -78,7 +80,6 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
         p = _resolve(srv, path)
         created = not p.exists()
         if frontmatter:
-            import yaml
             fm_text = yaml.safe_dump(frontmatter, sort_keys=False).rstrip()
             full = f"---\n{fm_text}\n---\n{content}"
         else:
@@ -107,7 +108,6 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
     @mcp.tool()
     def delete_note(path: str, soft: bool = True) -> dict[str, Any]:
         """Delete a note. soft=True moves to <archive>/<YYYY>/."""
-        from datetime import date
         p = _resolve(srv, path)
         if not p.is_file():
             raise FileNotFoundError(path)

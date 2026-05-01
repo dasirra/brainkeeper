@@ -10,6 +10,8 @@ from .config import Config, ConfigLoader
 from .fs import AtomicWriter
 from .index import Index
 from .rescanner import PeriodicRescanner
+from .tools.convention import register_convention
+from .tools.primitives import register_primitives
 from .watcher import FileWatcher
 
 
@@ -24,9 +26,7 @@ class BrainkeeperServer:
         self.watcher = FileWatcher(self.vault, self.index)
         self.rescanner = PeriodicRescanner(self.vault, self.index)
         self.mcp = FastMCP("brainkeeper")
-        from .tools.primitives import register_primitives
         register_primitives(self.mcp, self)
-        from .tools.convention import register_convention
         register_convention(self.mcp, self)
 
     def start_infrastructure(self) -> None:
