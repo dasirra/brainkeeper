@@ -1,7 +1,10 @@
+from datetime import date
 from pathlib import Path
 
+import frontmatter as fm_lib
 import pytest
 
+from brainkeeper_mcp.fs import StaleWriteError
 from brainkeeper_mcp.server import BrainkeeperServer
 
 
@@ -17,6 +20,10 @@ def _call(srv: BrainkeeperServer, tool_name: str, **kwargs):
     components = srv.mcp._local_provider._components
     tool = next(t for k, t in components.items() if k.startswith("tool:") and t.name == tool_name)
     return tool.fn(**kwargs)
+
+
+def _read_fm(path: Path) -> dict:
+    return dict(fm_lib.load(path).metadata or {})
 
 
 def test_read_note_returns_frontmatter_and_content(srv, minimal_vault):
@@ -82,7 +89,6 @@ def test_write_with_correct_mtime(srv, minimal_vault):
 
 
 def test_write_stale_mtime_rejected(srv, minimal_vault):
-    from brainkeeper_mcp.fs import StaleWriteError
     n = minimal_vault / "40 Brain" / "u.md"
     n.write_text("---\ntype: knowledge\nstatus: active\ncreated: 2026-04-27\ntags: [t/x]\n---\nold")
     srv.index.update(n)
@@ -104,7 +110,6 @@ def test_move_note(srv, minimal_vault):
 
 
 def test_delete_note_soft_moves_to_archive_year(srv, minimal_vault):
-    from datetime import date
     n = minimal_vault / "20 Projects" / "old.md"
     n.write_text("---\ntype: project\nstatus: completed\ncreated: 2024-01-01\ntags: [p/old]\n---\n")
     srv.index.update(n)
@@ -127,7 +132,6 @@ def test_delete_note_hard_unlinks(srv, minimal_vault):
 
 def test_delete_note_soft_refreshes_updated(srv, minimal_vault):
     """Per spec §12, archive transition refreshes `updated` to today."""
-    from datetime import date
     today = date.today().isoformat()
     n = minimal_vault / "20 Projects" / "old.md"
     n.write_text(
@@ -136,8 +140,7 @@ def test_delete_note_soft_refreshes_updated(srv, minimal_vault):
     srv.index.update(n)
     out = _call(srv, "delete_note", path="20 Projects/old.md", soft=True)
     moved = minimal_vault / out["destination"]
-    import frontmatter as fm_lib
-    fm = dict(fm_lib.load(moved).metadata or {})
+    fm = _read_fm(moved)
     assert str(fm["updated"])[:10] == today
     # `created` preserved unchanged
     assert str(fm["created"])[:10] == "2024-01-01"
@@ -164,19 +167,12 @@ def test_move_note_does_not_touch_frontmatter(srv, minimal_vault):
     srv.index.update(n)
     _call(srv, "move_note", src="00 Inbox/x.md", dst="40 Brain/x.md")
     moved = minimal_vault / "40 Brain" / "x.md"
-    import frontmatter as fm_lib
-    fm = dict(fm_lib.load(moved).metadata or {})
+    fm = _read_fm(moved)
     assert str(fm["updated"])[:10] == "2024-01-01"  # unchanged
     assert str(fm["created"])[:10] == "2024-01-01"  # unchanged
 
 
-def _read_fm(path: Path) -> dict:
-    import frontmatter as fm_lib
-    return dict(fm_lib.load(path).metadata or {})
-
-
 def test_write_autofills_created_and_updated_on_new(srv, minimal_vault):
-    from datetime import date
     today = date.today().isoformat()
     _call(
         srv, "write_note_atomic",
@@ -190,7 +186,6 @@ def test_write_autofills_created_and_updated_on_new(srv, minimal_vault):
 
 
 def test_write_preserves_caller_created(srv, minimal_vault):
-    from datetime import date
     today = date.today().isoformat()
     _call(
         srv, "write_note_atomic",
@@ -206,7 +201,6 @@ def test_write_preserves_caller_created(srv, minimal_vault):
 
 def test_write_preserves_ondisk_created_on_overwrite(srv, minimal_vault):
     """Overwriting existing note keeps its `created` from disk if not provided."""
-    from datetime import date
     today = date.today().isoformat()
     n = minimal_vault / "40 Brain" / "exist.md"
     n.write_text("---\ncreated: 2025-06-01\nupdated: 2025-06-01\ntags: [t/x]\n---\nold")

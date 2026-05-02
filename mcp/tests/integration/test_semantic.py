@@ -1,5 +1,7 @@
+from datetime import date
 from pathlib import Path
 
+import frontmatter as fm_lib
 import pytest
 
 from brainkeeper_mcp.server import BrainkeeperServer
@@ -156,12 +158,10 @@ def test_validate_frontmatter_works_on_unindexed_file(srv, minimal_vault):
 
 
 def _read_fm(path: Path) -> dict:
-    import frontmatter as fm_lib
     return dict(fm_lib.load(path).metadata or {})
 
 
 def test_update_frontmatter_patches_keys_and_refreshes_updated(srv, minimal_vault):
-    from datetime import date
     today = date.today().isoformat()
     a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"])
     # Edit so we have a known on-disk updated
@@ -197,7 +197,6 @@ def test_update_frontmatter_none_value_deletes_key(srv, minimal_vault):
 
 def test_update_frontmatter_overrides_caller_updated(srv, minimal_vault):
     """Caller cannot backdate `updated` — the tool always sets today."""
-    from datetime import date
     today = date.today().isoformat()
     a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"])
     srv.index.update(a)
@@ -217,7 +216,6 @@ def test_update_frontmatter_honors_caller_created(srv, minimal_vault):
 
 def test_update_frontmatter_brings_unmanaged_into_compliance(srv, minimal_vault):
     """A file with no frontmatter gets a fresh block built from the patch."""
-    from datetime import date
     today = date.today().isoformat()
     p = minimal_vault / "40 Brain" / "raw.md"
     p.write_text("just bytes, no frontmatter")

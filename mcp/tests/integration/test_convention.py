@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -77,12 +78,10 @@ def test_resolve_path_anchor(srv):
     out = _call(srv, "resolve_path", intent="meeting")
     assert out["anchor"] == "Meetings"
     assert out["mode"] == "append"
-    from datetime import date
     assert date.today().isoformat() in out["path"]
 
 
 def test_resolve_path_today_substitution(srv):
     srv.config.capture_routing["daily"] = "10 Journal/{today}.md"
     out = _call(srv, "resolve_path", intent="daily")
-    from datetime import date
     assert out["path"].endswith(f"{date.today().isoformat()}.md")
