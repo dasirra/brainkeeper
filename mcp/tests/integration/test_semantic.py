@@ -150,3 +150,86 @@ def test_validate_frontmatter_works_on_unindexed_file(srv, minimal_vault):
     # Deliberately do NOT call srv.index.update(a)
     out = _call(srv, "validate_frontmatter", path="40 Brain/fresh.md")
     assert out["valid"] is True
+
+
+# ---------- update_frontmatter ----------
+
+
+def _read_fm(path: Path) -> dict:
+    import frontmatter as fm_lib
+    return dict(fm_lib.load(path).metadata or {})
+
+
+def test_update_frontmatter_patches_keys_and_refreshes_updated(srv, minimal_vault):
+    from datetime import date
+    today = date.today().isoformat()
+    a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"])
+    # Edit so we have a known on-disk updated
+    srv.index.update(a)
+    out = _call(srv, "update_frontmatter", path="40 Brain/n.md",
+                patch={"tags": ["topic/y", "new"]})
+    assert out["frontmatter"]["tags"] == ["topic/y", "new"]
+    assert str(out["frontmatter"]["updated"])[:10] == today
+    # Check on disk too
+    fm = _read_fm(minimal_vault / "40 Brain" / "n.md")
+    assert fm["tags"] == ["topic/y", "new"]
+
+
+def test_update_frontmatter_preserves_unspecified_keys(srv, minimal_vault):
+    a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"], extra="custom_field: 42\n")
+    srv.index.update(a)
+    _call(srv, "update_frontmatter", path="40 Brain/n.md",
+          patch={"new_field": "hello"})
+    fm = _read_fm(minimal_vault / "40 Brain" / "n.md")
+    assert fm["custom_field"] == 42  # untouched
+    assert fm["new_field"] == "hello"  # added
+    assert fm["tags"] == ["topic/x"]   # untouched
+
+
+def test_update_frontmatter_none_value_deletes_key(srv, minimal_vault):
+    a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"], extra="legacy: gone\n")
+    srv.index.update(a)
+    _call(srv, "update_frontmatter", path="40 Brain/n.md",
+          patch={"legacy": None})
+    fm = _read_fm(minimal_vault / "40 Brain" / "n.md")
+    assert "legacy" not in fm
+
+
+def test_update_frontmatter_overrides_caller_updated(srv, minimal_vault):
+    """Caller cannot backdate `updated` — the tool always sets today."""
+    from datetime import date
+    today = date.today().isoformat()
+    a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"])
+    srv.index.update(a)
+    out = _call(srv, "update_frontmatter", path="40 Brain/n.md",
+                patch={"updated": "2020-01-01"})
+    assert str(out["frontmatter"]["updated"])[:10] == today
+
+
+def test_update_frontmatter_honors_caller_created(srv, minimal_vault):
+    """`created` IS overridable via patch (unlike `updated`)."""
+    a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"])
+    srv.index.update(a)
+    out = _call(srv, "update_frontmatter", path="40 Brain/n.md",
+                patch={"created": "2024-06-15"})
+    assert str(out["frontmatter"]["created"])[:10] == "2024-06-15"
+
+
+def test_update_frontmatter_brings_unmanaged_into_compliance(srv, minimal_vault):
+    """A file with no frontmatter gets a fresh block built from the patch."""
+    from datetime import date
+    today = date.today().isoformat()
+    p = minimal_vault / "40 Brain" / "raw.md"
+    p.write_text("just bytes, no frontmatter")
+    out = _call(srv, "update_frontmatter", path="40 Brain/raw.md",
+                patch={"tags": ["new"]})
+    assert out["frontmatter"]["tags"] == ["new"]
+    assert str(out["frontmatter"]["created"])[:10] == today
+    assert str(out["frontmatter"]["updated"])[:10] == today
+    # Body preserved
+    assert "just bytes, no frontmatter" in p.read_text()
+
+
+def test_update_frontmatter_missing_file_raises(srv):
+    with pytest.raises(FileNotFoundError):
+        _call(srv, "update_frontmatter", path="40 Brain/nope.md", patch={"tags": ["x"]})
