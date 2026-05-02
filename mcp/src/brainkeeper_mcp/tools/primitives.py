@@ -131,7 +131,13 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
 
     @mcp.tool()
     def delete_note(path: str, soft: bool = True) -> dict[str, Any]:
-        """Delete a note. soft=True moves to <archive>/<YYYY>/."""
+        """Delete a note. soft=True archives to <archive>/<YYYY>/.
+
+        Soft delete implements the archive transition per spec §12: the file
+        moves to the archive layer, and `updated` is refreshed to today.
+        Other frontmatter fields are preserved unchanged. Unmanaged notes
+        (no frontmatter) are moved without modification.
+        """
         p = _resolve(srv, path)
         if not p.is_file():
             raise FileNotFoundError(path)
@@ -142,7 +148,22 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
                 archive_dir = archive_dir / str(date.today().year)
             archive_dir.mkdir(parents=True, exist_ok=True)
             target = archive_dir / p.name
-            p.replace(target)
+
+            post = fm_lib.load(p)
+            if post.metadata:
+                meta = dict(post.metadata)
+                for k in ("created", "updated"):
+                    v = meta.get(k)
+                    if hasattr(v, "isoformat"):
+                        meta[k] = v.isoformat()[:10]
+                meta["updated"] = date.today().isoformat()
+                fm_text = yaml.safe_dump(meta, sort_keys=False, allow_unicode=True).rstrip()
+                new_content = f"---\n{fm_text}\n---\n{post.content}"
+                srv.writer.write_atomic(target, new_content)
+                p.unlink()
+            else:
+                p.replace(target)
+
             srv.index.remove(p)
             srv.index.update(target)
             return {"path": _rel(srv, p), "destination": _rel(srv, target)}

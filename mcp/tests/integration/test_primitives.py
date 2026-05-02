@@ -125,6 +125,51 @@ def test_delete_note_hard_unlinks(srv, minimal_vault):
     assert out["destination"] is None
 
 
+def test_delete_note_soft_refreshes_updated(srv, minimal_vault):
+    """Per spec §12, archive transition refreshes `updated` to today."""
+    from datetime import date
+    today = date.today().isoformat()
+    n = minimal_vault / "20 Projects" / "old.md"
+    n.write_text(
+        "---\ncreated: 2024-01-01\nupdated: 2024-01-01\ntags: [p/old]\n---\nbody"
+    )
+    srv.index.update(n)
+    out = _call(srv, "delete_note", path="20 Projects/old.md", soft=True)
+    moved = minimal_vault / out["destination"]
+    import frontmatter as fm_lib
+    fm = dict(fm_lib.load(moved).metadata or {})
+    assert str(fm["updated"])[:10] == today
+    # `created` preserved unchanged
+    assert str(fm["created"])[:10] == "2024-01-01"
+    # tags preserved unchanged
+    assert fm["tags"] == ["p/old"]
+
+
+def test_delete_note_soft_preserves_unmanaged_file(srv, minimal_vault):
+    """A note with no frontmatter is moved as-is (nothing to refresh)."""
+    n = minimal_vault / "20 Projects" / "raw.md"
+    n.write_text("just bytes, no frontmatter")
+    srv.index.update(n)
+    out = _call(srv, "delete_note", path="20 Projects/raw.md", soft=True)
+    moved = minimal_vault / out["destination"]
+    assert moved.read_text() == "just bytes, no frontmatter"
+
+
+def test_move_note_does_not_touch_frontmatter(srv, minimal_vault):
+    """`move_note` is content-preserving; `updated` should NOT change."""
+    n = minimal_vault / "00 Inbox" / "x.md"
+    n.write_text(
+        "---\ncreated: 2024-01-01\nupdated: 2024-01-01\ntags: [t/x]\n---\nbody"
+    )
+    srv.index.update(n)
+    _call(srv, "move_note", src="00 Inbox/x.md", dst="40 Brain/x.md")
+    moved = minimal_vault / "40 Brain" / "x.md"
+    import frontmatter as fm_lib
+    fm = dict(fm_lib.load(moved).metadata or {})
+    assert str(fm["updated"])[:10] == "2024-01-01"  # unchanged
+    assert str(fm["created"])[:10] == "2024-01-01"  # unchanged
+
+
 def _read_fm(path: Path) -> dict:
     import frontmatter as fm_lib
     return dict(fm_lib.load(path).metadata or {})
