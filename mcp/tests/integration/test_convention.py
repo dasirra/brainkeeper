@@ -36,7 +36,7 @@ def test_list_layers(srv):
 
 
 def test_get_template_with_layer(srv, minimal_vault):
-    tdir = minimal_vault / "10 Journal" / ".templates"
+    tdir = minimal_vault / "10 Journal" / "_templates"
     tdir.mkdir(parents=True, exist_ok=True)
     (tdir / "Daily.md").write_text("# {{today}}\n")
     out = _call(srv, "get_template", name="Daily", layer="journal")
@@ -46,7 +46,7 @@ def test_get_template_with_layer(srv, minimal_vault):
 
 
 def test_get_template_search_all_layers(srv, minimal_vault):
-    tdir = minimal_vault / "20 Projects" / ".templates"
+    tdir = minimal_vault / "20 Projects" / "_templates"
     tdir.mkdir(parents=True, exist_ok=True)
     (tdir / "Project.md").write_text("# {{title}}\n")
     out = _call(srv, "get_template", name="Project")
@@ -75,7 +75,15 @@ def test_list_domains_empty_when_no_subfolders(srv):
 
 
 def test_list_domains_skips_dot_dirs(srv, minimal_vault):
-    (minimal_vault / "20 Projects" / ".templates").mkdir()
+    (minimal_vault / "20 Projects" / ".obsidian").mkdir()
+    (minimal_vault / "20 Projects" / "Real").mkdir()
+    out = _call(srv, "list_domains")
+    names = {d["name"] for d in out}
+    assert names == {"real"}
+
+
+def test_list_domains_skips_underscore_templates(srv, minimal_vault):
+    (minimal_vault / "20 Projects" / "_templates").mkdir()
     (minimal_vault / "20 Projects" / "Real").mkdir()
     out = _call(srv, "list_domains")
     names = {d["name"] for d in out}

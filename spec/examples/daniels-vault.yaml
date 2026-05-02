@@ -7,10 +7,7 @@ layers:
   journal:
     path: "10 Journal"
     format: "YYYY-MM-DD.md"
-  projects:
-    path: "20 Projects"
-    status_field: status
-    active_values: ["active", "🟢"]
+  projects: "20 Projects"
   areas: "30 Areas"
   brain: "40 Brain"
   archive:

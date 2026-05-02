@@ -26,7 +26,7 @@ class _Handler(FileSystemEventHandler):
             rel = path.relative_to(self.vault_root)
         except ValueError:
             return
-        if any(p.startswith(".") for p in rel.parts):
+        if any(p.startswith(".") or p == "_templates" for p in rel.parts):
             return
 
         def _fire():

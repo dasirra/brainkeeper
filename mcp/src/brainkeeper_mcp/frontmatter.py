@@ -1,4 +1,4 @@
-"""YAML frontmatter parsing + validation against brainkeeper spec v0.1."""
+"""YAML frontmatter parsing + validation against brainkeeper spec v0.1.3."""
 
 from __future__ import annotations
 
@@ -9,15 +9,8 @@ from typing import Any
 
 import frontmatter
 
-ALLOWED_TYPES: frozenset[str] = frozenset((
-    "project", "area", "idea", "journal",
-    "meeting", "note", "resource", "knowledge",
-))
-ALLOWED_STATUSES: frozenset[str] = frozenset((
-    "active", "paused", "completed", "archived",
-))
-REQUIRED_FIELDS: tuple[str, ...] = ("type", "status", "created", "tags")
-DATE_FIELDS: tuple[str, ...] = ("created", "deadline", "archived")
+REQUIRED_FIELDS: tuple[str, ...] = ("created", "updated", "tags")
+DATE_FIELDS: tuple[str, ...] = ("created", "updated")
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _TAG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$")
@@ -50,20 +43,21 @@ class FrontmatterParser:
             if value in (None, "", []):
                 errors.append(f"required field `{field}` is missing or empty")
 
-        t = meta.get("type")
-        if t and str(t) not in ALLOWED_TYPES:
-            errors.append(f"`type` value '{t}' not in allowed enum")
-
-        s = meta.get("status")
-        if s and str(s) not in ALLOWED_STATUSES:
-            errors.append(f"`status` value '{s}' not in allowed enum")
-
         for field in DATE_FIELDS:
             v = meta.get(field)
             if v in (None, "", False):
                 continue
             if not _DATE_RE.match(str(v)):
                 errors.append(f"`{field}` value '{v}' is not YYYY-MM-DD")
+
+        created = meta.get("created")
+        updated = meta.get("updated")
+        if (
+            isinstance(created, str) and isinstance(updated, str)
+            and _DATE_RE.match(created) and _DATE_RE.match(updated)
+            and updated < created
+        ):
+            errors.append(f"`updated` ({updated}) is earlier than `created` ({created})")
 
         tags = meta.get("tags")
         if isinstance(tags, list):

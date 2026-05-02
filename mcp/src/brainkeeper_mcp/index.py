@@ -31,7 +31,8 @@ class Index:
         with self._lock:
             self._notes.clear()
             for f in self.vault_root.rglob("*.md"):
-                if any(p.startswith(".") for p in f.relative_to(self.vault_root).parts):
+                parts = f.relative_to(self.vault_root).parts
+                if any(p.startswith(".") or p == "_templates" for p in parts):
                     continue
                 self._index_file(f)
 

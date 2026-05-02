@@ -123,3 +123,68 @@ def test_delete_note_hard_unlinks(srv, minimal_vault):
     out = _call(srv, "delete_note", path="00 Inbox/trash.md", soft=False)
     assert not n.exists()
     assert out["destination"] is None
+
+
+def _read_fm(path: Path) -> dict:
+    import frontmatter as fm_lib
+    return dict(fm_lib.load(path).metadata or {})
+
+
+def test_write_autofills_created_and_updated_on_new(srv, minimal_vault):
+    from datetime import date
+    today = date.today().isoformat()
+    _call(
+        srv, "write_note_atomic",
+        path="40 Brain/auto.md",
+        content="body",
+        frontmatter={"tags": ["topic/x"]},  # no created/updated provided
+    )
+    fm = _read_fm(minimal_vault / "40 Brain" / "auto.md")
+    assert fm.get("created") and str(fm["created"])[:10] == today
+    assert fm.get("updated") and str(fm["updated"])[:10] == today
+
+
+def test_write_preserves_caller_created(srv, minimal_vault):
+    from datetime import date
+    today = date.today().isoformat()
+    _call(
+        srv, "write_note_atomic",
+        path="40 Brain/caller.md",
+        content="body",
+        frontmatter={"tags": ["topic/x"], "created": "2024-01-15"},
+    )
+    fm = _read_fm(minimal_vault / "40 Brain" / "caller.md")
+    assert str(fm["created"])[:10] == "2024-01-15"
+    # updated still refreshed to today regardless
+    assert str(fm["updated"])[:10] == today
+
+
+def test_write_preserves_ondisk_created_on_overwrite(srv, minimal_vault):
+    """Overwriting existing note keeps its `created` from disk if not provided."""
+    from datetime import date
+    today = date.today().isoformat()
+    n = minimal_vault / "40 Brain" / "exist.md"
+    n.write_text("---\ncreated: 2025-06-01\nupdated: 2025-06-01\ntags: [t/x]\n---\nold")
+    srv.index.update(n)
+    _call(
+        srv, "write_note_atomic",
+        path="40 Brain/exist.md",
+        content="new body",
+        frontmatter={"tags": ["t/x"]},  # no created
+    )
+    fm = _read_fm(n)
+    assert str(fm["created"])[:10] == "2025-06-01"  # preserved from disk
+    assert str(fm["updated"])[:10] == today          # refreshed
+
+
+def test_write_no_frontmatter_writes_raw_content(srv, minimal_vault):
+    _call(
+        srv, "write_note_atomic",
+        path="40 Brain/raw.md",
+        content="just bytes",
+        frontmatter=None,
+    )
+    text = (minimal_vault / "40 Brain" / "raw.md").read_text()
+    assert text == "just bytes"
+    # no auto-injected frontmatter block
+    assert not text.startswith("---")

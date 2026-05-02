@@ -25,7 +25,7 @@ def _find_template(srv: "BrainkeeperServer", name: str, layer: str | None) -> Pa
     layers = [layer] if layer else list(CANONICAL_KEYS)
     for lk in layers:
         layer_dir = srv.config.layer_path(lk)
-        templates_dir = layer_dir / ".templates"
+        templates_dir = layer_dir / "_templates"
         if not templates_dir.is_dir():
             continue
         for cand in candidates:
@@ -65,7 +65,7 @@ def register_convention(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
 
     @mcp.tool()
     def get_template(name: str, layer: str | None = None) -> dict[str, Any]:
-        """Locate a template. Searches `<layer>/.templates/` for the canonical layers."""
+        """Locate a template. Searches `<layer>/_templates/` for the canonical layers."""
         path = _find_template(srv, name, layer)
         content = path.read_text(encoding="utf-8")
         variables = sorted(set(_VAR_RE.findall(content)))
@@ -85,7 +85,7 @@ def register_convention(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
             if not layer_dir.is_dir():
                 continue
             for child in sorted(layer_dir.iterdir()):
-                if not child.is_dir() or child.name.startswith("."):
+                if not child.is_dir() or child.name.startswith(".") or child.name == "_templates":
                     continue
                 key = _kebab(child.name)
                 if key and key not in seen:

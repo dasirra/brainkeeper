@@ -51,8 +51,6 @@
           "properties": {
             "path":           { "$ref": "#/$defs/relPath" },
             "format":         { "type": "string" },
-            "status_field":   { "type": "string" },
-            "active_values":  { "type": "array", "items": { "type": "string" }, "minItems": 1 },
             "year_subfolder": { "type": "boolean" }
           }
         }

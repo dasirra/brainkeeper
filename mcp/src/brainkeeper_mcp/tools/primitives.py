@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import frontmatter
+import frontmatter as fm_lib
 import yaml
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
         p = _resolve(srv, path)
         if not p.is_file():
             raise FileNotFoundError(path)
-        post = frontmatter.load(p)
+        post = fm_lib.load(p)
         return {
             "path": _rel(srv, p),
             "frontmatter": dict(post.metadata or {}),
@@ -54,7 +54,7 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
             if not p.is_file():
                 continue
             rel_parts = p.relative_to(srv.vault).parts
-            if any(seg.startswith(".") for seg in rel_parts):
+            if any(seg.startswith(".") or seg == "_templates" for seg in rel_parts):
                 continue
             entry: dict[str, Any] = {
                 "path": _rel(srv, p),
@@ -62,7 +62,7 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
             }
             if with_frontmatter:
                 try:
-                    post = frontmatter.load(p)
+                    post = fm_lib.load(p)
                     entry["frontmatter"] = dict(post.metadata or {})
                 except Exception:
                     entry["frontmatter"] = {}
@@ -76,17 +76,41 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
         frontmatter: dict[str, Any] | None = None,
         expected_mtime: float | None = None,
     ) -> dict[str, Any]:
-        """Atomic write of a note. expected_mtime guards against concurrent writes."""
+        """Atomic write of a note.
+
+        When `frontmatter` is provided, `created` and `updated` are auto-managed
+        per spec v0.1.3 §6:
+        - On first write of a path, `created` defaults to today if not provided.
+        - On overwrite of an existing path, on-disk `created` is preserved if
+          not provided.
+        - `updated` is always refreshed to today.
+
+        `expected_mtime` guards against concurrent writes.
+        """
         p = _resolve(srv, path)
-        created = not p.exists()
-        if frontmatter:
-            fm_text = yaml.safe_dump(frontmatter, sort_keys=False).rstrip()
+        is_new = not p.exists()
+        today = date.today().isoformat()
+
+        if frontmatter is not None:
+            fm = dict(frontmatter)
+            if not is_new and "created" not in fm:
+                try:
+                    existing = fm_lib.load(p).metadata or {}
+                    if "created" in existing:
+                        v = existing["created"]
+                        fm["created"] = v.isoformat()[:10] if hasattr(v, "isoformat") else str(v)
+                except Exception:
+                    pass
+            fm.setdefault("created", today)
+            fm["updated"] = today
+            fm_text = yaml.safe_dump(fm, sort_keys=False, allow_unicode=True).rstrip()
             full = f"---\n{fm_text}\n---\n{content}"
         else:
             full = content
+
         mtime = srv.writer.write_atomic(p, full, expected_mtime=expected_mtime)
         srv.index.update(p)
-        return {"path": _rel(srv, p), "mtime": mtime, "created": created}
+        return {"path": _rel(srv, p), "mtime": mtime, "created": is_new}
 
     @mcp.tool()
     def move_note(src: str, dst: str) -> dict[str, Any]:

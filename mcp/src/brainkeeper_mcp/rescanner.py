@@ -32,7 +32,8 @@ class PeriodicRescanner:
     def rescan_once(self) -> None:
         on_disk: set[Path] = set()
         for f in self.vault_root.rglob("*.md"):
-            if any(p.startswith(".") for p in f.relative_to(self.vault_root).parts):
+            parts = f.relative_to(self.vault_root).parts
+            if any(p.startswith(".") or p == "_templates" for p in parts):
                 continue
             on_disk.add(f)
             self.index.update(f)

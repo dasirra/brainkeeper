@@ -568,13 +568,12 @@ def check_archive(vault: Path) -> Check:
 
 
 def check_templates(vault: Path) -> Check:
-    """Locate template folders; classify as colocated `.templates/` vs legacy."""
+    """Locate template folders; classify as colocated `_templates/` vs legacy."""
     mapping_paths = {p.name for p in _layer_mappings(vault).values()}
     colocated: list[Path] = []
     legacy: list[Path] = []
     loose_files: list[Path] = []
 
-    # Walk explicitly; rglob doesn't enter hidden dirs consistently across versions.
     stack: list[Path] = [vault]
     while stack:
         current = stack.pop()
@@ -586,16 +585,16 @@ def check_templates(vault: Path) -> Check:
             name = p.name
             rel_parts = p.relative_to(vault).parts
             if p.is_dir():
-                if name == ".templates":
+                if name == "_templates":
                     if rel_parts and rel_parts[0] in mapping_paths:
                         colocated.append(p)
                     else:
                         legacy.append(p)
                     continue
-                if name.lower() == "templates":
+                if name == ".templates" or name.lower() == "templates":
                     legacy.append(p)
                     continue
-                if name.startswith(".") and name != ".templates":
+                if name.startswith("."):
                     continue
                 stack.append(p)
             elif p.is_file() and p.suffix == ".md" and "template" in name.lower():
@@ -606,7 +605,7 @@ def check_templates(vault: Path) -> Check:
         return Check("Templates", "_No template folders or files detected._", "")
 
     headline = (
-        f"**Templates: {len(colocated)} colocated `.templates/`, "
+        f"**Templates: {len(colocated)} colocated `_templates/`, "
         f"{len(legacy)} legacy locations, "
         f"{len(loose_files)} loose template files.**"
     )
@@ -620,7 +619,7 @@ def check_templates(vault: Path) -> Check:
     if legacy:
         if lines:
             lines.append("")
-        lines.append("**Legacy template locations (should migrate to `<layer>/.templates/`):**")
+        lines.append("**Legacy template locations (should migrate to `<layer>/_templates/`):**")
         lines.append("")
         for d in sorted(legacy):
             lines.append(f"- `{d.relative_to(vault)}/`")
