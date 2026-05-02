@@ -12,6 +12,7 @@ from .index import Index
 from .rescanner import PeriodicRescanner
 from .tools.convention import register_convention
 from .tools.primitives import register_primitives
+from .tools.semantic import register_semantic
 from .watcher import FileWatcher
 
 
@@ -28,6 +29,7 @@ class BrainkeeperServer:
         self.mcp = FastMCP("brainkeeper")
         register_primitives(self.mcp, self)
         register_convention(self.mcp, self)
+        register_semantic(self.mcp, self)
 
     def start_infrastructure(self) -> None:
         self.index.build()
