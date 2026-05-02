@@ -153,3 +153,36 @@ def register_semantic(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
             "mtime": mtime,
             "frontmatter": meta,
         }
+
+    @mcp.tool()
+    def list_tags(prefix: str | None = None) -> list[dict[str, Any]]:
+        """List unique tags across the vault, with note counts.
+
+        With `prefix` set, only tags starting with that string are returned
+        (literal startswith — same semantics as `find_by_tag` prefix mode).
+        A leading '#' is stripped from both the prefix and the stored tags.
+
+        Returns `[{name, count}, ...]` sorted alphabetically by name. Each
+        tag is counted once per note even if it appears multiple times in
+        the same frontmatter list.
+        """
+        needle = prefix.lstrip("#") if prefix else None
+        counts: dict[str, int] = {}
+        for p in srv.index.paths():
+            meta = srv.index.get(p)
+            if not meta:
+                continue
+            tags = meta.frontmatter.get("tags") or []
+            if not isinstance(tags, list):
+                continue
+            seen_in_note: set[str] = set()
+            for t in tags:
+                if not isinstance(t, str):
+                    continue
+                normalized = t.lstrip("#")
+                if needle is not None and not normalized.startswith(needle):
+                    continue
+                seen_in_note.add(normalized)
+            for t in seen_in_note:
+                counts[t] = counts.get(t, 0) + 1
+        return [{"name": n, "count": counts[n]} for n in sorted(counts)]

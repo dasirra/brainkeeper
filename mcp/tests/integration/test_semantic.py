@@ -231,3 +231,57 @@ def test_update_frontmatter_brings_unmanaged_into_compliance(srv, minimal_vault)
 def test_update_frontmatter_missing_file_raises(srv):
     with pytest.raises(FileNotFoundError):
         _call(srv, "update_frontmatter", path="40 Brain/nope.md", patch={"tags": ["x"]})
+
+
+# ---------- list_tags ----------
+
+
+def test_list_tags_empty_vault(srv):
+    assert _call(srv, "list_tags") == []
+
+
+def test_list_tags_aggregates_counts_across_notes(srv, minimal_vault):
+    a = _make(minimal_vault, "40 Brain/a.md", ["mcp", "pkm"])
+    b = _make(minimal_vault, "40 Brain/b.md", ["mcp", "rag"])
+    c = _make(minimal_vault, "40 Brain/c.md", ["pkm"])
+    srv.index.update(a); srv.index.update(b); srv.index.update(c)
+    out = _call(srv, "list_tags")
+    counts = {item["name"]: item["count"] for item in out}
+    assert counts == {"mcp": 2, "pkm": 2, "rag": 1}
+
+
+def test_list_tags_sorted_alphabetically(srv, minimal_vault):
+    a = _make(minimal_vault, "40 Brain/a.md", ["zeta", "alpha", "mu"])
+    srv.index.update(a)
+    out = _call(srv, "list_tags")
+    names = [item["name"] for item in out]
+    assert names == ["alpha", "mu", "zeta"]
+
+
+def test_list_tags_prefix_filter(srv, minimal_vault):
+    a = _make(minimal_vault, "40 Brain/a.md", ["topic/mcp", "topic/rag", "domain/x"])
+    srv.index.update(a)
+    out = _call(srv, "list_tags", prefix="topic/")
+    names = {item["name"] for item in out}
+    assert names == {"topic/mcp", "topic/rag"}
+
+
+def test_list_tags_strips_hash_prefix(srv, minimal_vault):
+    a = _make(minimal_vault, "40 Brain/a.md", ["topic/mcp"])
+    srv.index.update(a)
+    out = _call(srv, "list_tags", prefix="#topic/")
+    assert len(out) == 1
+    assert out[0]["name"] == "topic/mcp"
+
+
+def test_list_tags_dedupes_within_note(srv, minimal_vault):
+    """Defensive: a tag listed twice in the same note counts once."""
+    p = minimal_vault / "40 Brain" / "dup.md"
+    p.write_text(
+        "---\ncreated: 2026-04-27\nupdated: 2026-04-27\n"
+        "tags:\n  - mcp\n  - mcp\n---\nbody"
+    )
+    srv.index.update(p)
+    out = _call(srv, "list_tags")
+    [item] = out
+    assert item == {"name": "mcp", "count": 1}
