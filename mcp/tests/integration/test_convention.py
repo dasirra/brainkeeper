@@ -58,38 +58,6 @@ def test_get_template_missing(srv):
         _call(srv, "get_template", name="Nonexistent")
 
 
-def test_list_domains_from_folders(srv, minimal_vault):
-    (minimal_vault / "20 Projects" / "Brainkeeper").mkdir()
-    (minimal_vault / "20 Projects" / "Fitizens").mkdir()
-    (minimal_vault / "30 Areas" / "Home Lab").mkdir()
-    out = _call(srv, "list_domains")
-    names = {d["name"] for d in out}
-    assert "brainkeeper" in names
-    assert "fitizens" in names
-    assert "home-lab" in names
-
-
-def test_list_domains_empty_when_no_subfolders(srv):
-    out = _call(srv, "list_domains")
-    assert out == []
-
-
-def test_list_domains_skips_dot_dirs(srv, minimal_vault):
-    (minimal_vault / "20 Projects" / ".obsidian").mkdir()
-    (minimal_vault / "20 Projects" / "Real").mkdir()
-    out = _call(srv, "list_domains")
-    names = {d["name"] for d in out}
-    assert names == {"real"}
-
-
-def test_list_domains_skips_underscore_templates(srv, minimal_vault):
-    (minimal_vault / "20 Projects" / "_templates").mkdir()
-    (minimal_vault / "20 Projects" / "Real").mkdir()
-    out = _call(srv, "list_domains")
-    names = {d["name"] for d in out}
-    assert names == {"real"}
-
-
 def test_resolve_path_with_intent(srv, minimal_vault):
     srv.config.capture_routing["idea"] = "30 Areas/Ideas/Inbox.md"
     out = _call(srv, "resolve_path", intent="idea")

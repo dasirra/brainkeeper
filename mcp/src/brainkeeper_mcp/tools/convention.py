@@ -35,13 +35,6 @@ def _find_template(srv: "BrainkeeperServer", name: str, layer: str | None) -> Pa
     raise FileNotFoundError(f"template '{name}' not found under any layer")
 
 
-def _kebab(s: str) -> str:
-    s = s.lower().strip()
-    s = re.sub(r"[^a-z0-9-]+", "-", s)
-    s = re.sub(r"-+", "-", s).strip("-")
-    return s
-
-
 def register_convention(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
 
     @mcp.tool()
@@ -75,22 +68,6 @@ def register_convention(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
             "content": content,
             "variables": variables,
         }
-
-    @mcp.tool()
-    def list_domains() -> list[dict[str, Any]]:
-        """Derive domain vocabulary from folders under projects/ and areas/."""
-        seen: dict[str, str] = {}
-        for layer_key in ("projects", "areas"):
-            layer_dir = srv.config.layer_path(layer_key)
-            if not layer_dir.is_dir():
-                continue
-            for child in sorted(layer_dir.iterdir()):
-                if not child.is_dir() or child.name.startswith(".") or child.name == "_templates":
-                    continue
-                key = _kebab(child.name)
-                if key and key not in seen:
-                    seen[key] = str(child.relative_to(srv.vault))
-        return [{"name": k, "source_folder": v} for k, v in seen.items()]
 
     @mcp.tool()
     def resolve_path(intent: str, params: dict[str, Any] | None = None) -> dict[str, Any]:

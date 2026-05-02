@@ -1,6 +1,5 @@
 # Full reference config. Daniel Sierra's vault.
 # Demonstrates the object-form for layers that accept options.
-# No domains list: vocabulary derives from folders under projects/ and areas/.
 
 layers:
   inbox: "00 Inbox"

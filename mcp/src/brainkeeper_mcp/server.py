@@ -16,6 +16,57 @@ from .tools.semantic import register_semantic
 from .watcher import FileWatcher
 
 
+INSTRUCTIONS = """\
+brainkeeper MCP: structured markdown vault following the brainkeeper spec.
+
+## Access rule
+
+ALL vault access goes through these tools. Do NOT use filesystem tools
+(Read, Write, Edit, Glob, Grep, Bash) on the vault path — the MCP encodes
+the spec contract and bypassing it produces non-compliant data.
+
+## Vault concepts
+
+- **Six canonical layers** keyed by: `inbox, journal, projects, areas,
+  brain, archive`. Resolve folder names via `list_layers` or
+  `read_convention` — never hardcode them.
+- **Tags are the only classification axis.** Each managed note carries
+  ≥1 tag. Tags are freeform strings, lowercase kebab-case (e.g. `mcp`,
+  `pkm`, `obsidian`). A `prefix/value` form is allowed but not
+  prescribed — use it if it helps you find notes later, skip it if it
+  doesn't.
+- **Frontmatter minimum**: every managed note requires `created` (ISO
+  date), `updated` (ISO date, ≥ created), and `tags` (≥1 entry). Any
+  other field is allowed and passed through unchanged.
+- **`_templates/` is meta.** Templates live in `<layer>/_templates/`.
+  They are excluded from indexing and content queries.
+
+## Recommended workflow
+
+- **Capture a new note**: `resolve_path(intent)` → optional
+  `get_template(name)` → `write_note_atomic(path, content, frontmatter)`.
+  The tool auto-fills `created` (today on new file, on-disk value
+  preserved on overwrite) and `updated` (always today). Do not compute
+  these yourself.
+- **Read content**: `read_note(path)`. Returns parsed frontmatter,
+  content, mtime.
+- **Find by tag**: `find_by_tag(tag, prefix_match=True)`. Default is
+  literal prefix match (startswith); use `prefix_match=False` for exact.
+  A leading `#` is normalized.
+- **Hygiene**: `find_orphans()` returns every note failing spec
+  validation; `validate_frontmatter(path)` checks a single note.
+- **Explore**: `list_layers`, `list_notes`, `read_convention`.
+
+## Defaults & limitations
+
+- Captures with no routing match go to `inbox`.
+- `delete_note(soft=True)` archives to `<archive>/<YYYY>/`.
+- `move_note` does NOT rewrite wikilinks (v1).
+- Unknown template variables `{{var}}` are left untouched on
+  substitution.
+"""
+
+
 class BrainkeeperServer:
     """Holds infrastructure + the FastMCP instance with tools registered."""
 
@@ -26,7 +77,7 @@ class BrainkeeperServer:
         self.writer = AtomicWriter()
         self.watcher = FileWatcher(self.vault, self.index)
         self.rescanner = PeriodicRescanner(self.vault, self.index)
-        self.mcp = FastMCP("brainkeeper")
+        self.mcp = FastMCP("brainkeeper", instructions=INSTRUCTIONS)
         register_primitives(self.mcp, self)
         register_convention(self.mcp, self)
         register_semantic(self.mcp, self)

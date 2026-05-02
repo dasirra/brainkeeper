@@ -9,6 +9,18 @@ Two artifacts are versioned independently:
 - **`spec-vX.Y.Z`**: the brainkeeper specification (`spec/`).
 - **`mcp-vX.Y.Z`**: the `brainkeeper-mcp` Python package (forthcoming).
 
+## [spec-v0.1.4] - 2026-05-02
+
+### Changed
+- **Breaking:** §7 Tag taxonomy simplified. The prescribed dimensions table (`domain/`, `topic/`, `project/`, `person/`) is removed. Tags are now plain lowercase kebab-case strings; the `prefix/value` form is still allowed but no longer prescribed. The "domain vocabulary derived from folders" mechanism is gone — there is no implicit vocabulary, just freeform tags.
+- MCP `list_domains` tool removed. Folder-derived domain vocabulary is no longer a spec concept; nothing replaces this tool. Use `list_notes` + `find_by_tag` for tag exploration.
+- Spec cross-references (§3, §5, §10, §15, §16) cleaned up to drop "domain" terminology.
+- MCP server now ships an `instructions=` block via FastMCP that surfaces to every connected client. Encodes the access rule, vault concepts, recommended workflow, and limitations.
+
+### Migration
+- No frontmatter changes needed. Existing tags with `domain/` or any other prefix continue to validate (the grammar regex is unchanged).
+- Remove any tooling that calls `list_domains` (it no longer exists).
+
 ## [spec-v0.1.3] - 2026-05-01
 
 ### Changed
@@ -44,6 +56,7 @@ Two artifacts are versioned independently:
 - Archive semantics narrowed to completed projects only; retired Areas are deleted or distilled into Brain, not archived.
 - Domain tags: cardinality relaxed to 0..n (optional but recommended); vocabulary derived from folders under `projects/` and `areas/` rather than an enumerated list in the config.
 
+[spec-v0.1.4]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.1.4
 [spec-v0.1.3]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.1.3
 [spec-v0.1.2]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.1.2
 [spec-v0.1.1]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.1.1

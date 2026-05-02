@@ -1,8 +1,8 @@
 # brainkeeper specification
 
-**Version:** 0.1.3
+**Version:** 0.1.4
 **Status:** Draft
-**Date:** 2026-05-01
+**Date:** 2026-05-02
 **License:** MIT
 
 ## Abstract
@@ -73,7 +73,7 @@ Prefixes are a convention, not a requirement. A vault MAY use non-numeric names 
 A conforming vault MUST contain the six layer directories at the configured paths. Tooling MAY auto-create any missing layer directory on startup. Two path conventions are additionally reserved:
 
 - **`<archive>/<YYYY>/`**. If the `archive` layer uses `year_subfolder: true` (default), tooling creates per-year subfolders on demand when archiving.
-- **`<layer>/_templates/`**. Each layer that uses templates places them under a `_templates/` subfolder (see §10). The underscore prefix marks the folder as meta (not a content domain) while keeping it visible in Obsidian's sidebar so users can edit templates from the same UI they use for notes.
+- **`<layer>/_templates/`**. Each layer that uses templates places them under a `_templates/` subfolder (see §10). The underscore prefix marks the folder as meta (not a content folder) while keeping it visible in Obsidian's sidebar so users can edit templates from the same UI they use for notes.
 
 No other paths are reserved by this spec. Users remain free to create any subdirectory structure inside any layer.
 
@@ -105,7 +105,7 @@ layers:
 
 and the vault remains compliant. Tooling MUST reference layers by their canonical key (`layers.projects`) and never by a literal path string.
 
-This rule applies to all spec-reserved concepts: template file names (§10) and capture routes (§14) are user-configurable strings mapped through the config file. Domain tag values (§7) derive from folder names under `projects/` and `areas/`, so renaming a folder renames the domain.
+This rule applies to all spec-reserved concepts: template file names (§10) and capture routes (§14) are user-configurable strings mapped through the config file.
 
 
 ## Part II: Content model
@@ -139,52 +139,21 @@ tags:
 
 ### 7. Tag taxonomy
 
-brainkeeper uses a hierarchical tag grammar. Dimensions (prefixes) are prescribed; values are open.
+Every managed note carries at least one tag (see §6). Tags are the primary classification axis: they cross-cut the folder hierarchy, letting queries span all six layers.
 
-**Prescribed dimensions:**
+**Grammar.** Tags are lowercase kebab-case strings. Tooling MUST validate the pattern `^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$`. The optional `prefix/value` form is allowed for users who want soft hierarchy (`topic/mcp`, `area/finance`); use it if it helps you find notes later, skip it if it doesn't. Singular form is recommended (`person/daniel`, not `people/daniels`).
 
-| Prefix     | Cardinality | Required?   | Value source |
-|------------|-------------|-------------|--------------|
-| `domain/`  | 0..n        | recommended | Derived from folder names under `projects/` and `areas/` (see "Domain vocabulary" below). |
-| `topic/`   | 0..n        | recommended | Free (user-defined vocabulary). |
-| `project/` | 0..n        | required on notes related to an active project | Free; SHOULD match a project folder slug. |
-| `person/`  | 0..n        | optional    | Free (meeting and 1-on-1 notes). |
+**No prescribed dimensions.** brainkeeper does not require any particular tag prefix or vocabulary. Pick names that make sense for your vault. The `#` prefix is NOT included in the YAML value:
 
-**Syntax rules:**
+```yaml
+tags:
+  - mcp
+  - pkm
+  - obsidian
+  - topic/spec   # prefix form, optional
+```
 
-- Lowercase only.
-- Kebab-case (words joined by `-`).
-- Singular form (`person/daniel`, not `people/daniels`).
-- YAML list form. The `#` prefix is NOT included in the YAML value:
-
-  ```yaml
-  tags:
-    - domain/fitizens
-    - topic/mcp
-    - project/brainkeeper
-  ```
-
-- At least one tag of any dimension is required on every managed note (see §6).
-
-**Guiding principle.** Tag what the folder path does not already encode. A file under `20 Projects/Brainkeeper/` already implies `project/brainkeeper`; adding it is redundant but not wrong. A note in `40 Brain/` about the MCP protocol benefits from `topic/mcp` because `40 Brain/` alone does not convey it.
-
-**Why domain tags.** Domains are the cross-cutting axis the folder tree cannot represent. Folders classify notes by *kind* (project, journal, knowledge); domains classify by *life area* (fitizens, teaching, family). A Brain note and a Journal entry can both carry `domain/fitizens`, supporting queries that span all six layers. Concrete uses:
-
-- **Per-domain filtering.** "All active notes in `domain/teaching`" crosses Projects, Journal, Areas, Brain.
-- **Context-aware capture.** Tooling or an agent can inject the active domain during note creation.
-- **Analytics.** Aggregate queries ("hours logged per domain this month") become natural.
-- **Agent routing.** Domain tags are the single most useful filter when an agent acts on a subset of the vault.
-
-**Domain vocabulary.** brainkeeper does NOT require a fixed domain list in `brainkeeper.yaml`. The vocabulary is derived from folder structure:
-
-- A direct subfolder of `projects/` at path `projects/<Name>/` yields a valid domain value `kebab-case(<Name>)`.
-- A direct subfolder of `areas/` at path `areas/<Name>/` yields a valid domain value `kebab-case(<Name>)`.
-
-Kebab-case conversion lowercases the name, replaces whitespace runs with a single `-`, and strips characters outside `[a-z0-9-]`. `Fitizens` becomes `fitizens`; `Home Lab` becomes `home-lab`; `AI Research` becomes `ai-research`.
-
-Tooling and LLM-driven capture SHOULD infer the domain tag from the destination folder path or from content context, preferring existing domains (folders that already exist) over inventing new values. Creating a new domain is equivalent to creating a new top-level subfolder under `projects/` or `areas/`. Renaming a folder renames the domain from that point forward; historical tags continue to refer to the old value.
-
-**Domain tag grammar.** Domain values MUST be lowercase kebab-case (regex: `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`, length 2 to 40). Tooling SHOULD reject tags that fail this pattern. Tooling SHOULD NOT reject a tag solely for not appearing in a prior enum, since the vocabulary is implicit and evolves with the folder tree.
+**Guiding principle.** Tag what the folder path does not already encode. A file under `20 Projects/Brainkeeper/` is already known to belong to the Brainkeeper project; tagging it `brainkeeper` again is redundant but not wrong. A note in `40 Brain/` benefits from tags because the folder alone says nothing about what the note is about.
 
 
 ### 8. Naming conventions
@@ -229,7 +198,7 @@ Templates colocate with the layer they serve. Each layer that uses templates pla
 | `<areas>/_templates/Area Index.md` | Template for area entry-point notes. |
 | `<areas>/_templates/Idea.md`       | Template for captured ideas. |
 
-The `_templates/` underscore-prefix marks the folder as meta (not a content domain). Unlike a hidden dot-folder, it remains visible in Obsidian's sidebar so users can browse and edit templates from the same UI they use for notes. It moves automatically with the layer when the user renames a folder in `brainkeeper.yaml`, so bilingual and alternate-convention vaults need no additional config. Tooling MUST treat `_templates/` as meta (skip from indexing, domain derivation, and content queries) and MAY auto-create it on demand.
+The `_templates/` underscore-prefix marks the folder as meta (not a content folder). Unlike a hidden dot-folder, it remains visible in Obsidian's sidebar so users can browse and edit templates from the same UI they use for notes. It moves automatically with the layer when the user renames a folder in `brainkeeper.yaml`, so bilingual and alternate-convention vaults need no additional config. Tooling MUST treat `_templates/` as meta (skip from indexing and content queries) and MAY auto-create it on demand.
 
 **Substitution.** Templates support simple `{{variable}}` substitution. Defined variables:
 
@@ -312,12 +281,11 @@ capture_routing:
 
 The following additions do NOT require a change to the spec or the schema. They are expressible in config alone:
 
-- Adding a new domain: create a folder under `projects/` or `areas/` with the domain name in Title Case. Tooling derives the `domain/<kebab-case>` tag value from the folder name.
 - Adding a new capture route: add a key under `capture_routing:`.
 - Adding a new template: drop a `.md` file into `<layer>/_templates/` inside the relevant layer.
 - Renaming any folder: change the corresponding path under `layers:`.
 
-Tooling SHOULD support live config reload: changes to `brainkeeper.yaml` should take effect without a restart. Domain tag values reflect current folder structure; deleting a domain folder does not invalidate historical tags but new captures SHOULD NOT reuse the removed value.
+Tooling SHOULD support live config reload: changes to `brainkeeper.yaml` should take effect without a restart.
 
 ### 16. Obsidian compatibility notes
 
@@ -326,7 +294,7 @@ The spec is tool-agnostic. Nothing in Parts I to III depends on Obsidian. This s
 - **Wikilink syntax.** `[[Note Name]]` is Obsidian's native link style (§9).
 - **YAML frontmatter.** The Properties feature in Obsidian reads the same `---` front block (§6).
 - **Folder names.** Arbitrary strings; Obsidian imposes no folder naming rules beyond the OS filesystem.
-- **Templates.** The `{{date}}` / `{{title}}` variables map onto Obsidian's Templates core plugin. The `_templates/` underscore-folder convention keeps templates visible in the sidebar (so they can be edited like any other note) while marking them as meta so brainkeeper tooling excludes them from indexing and domain derivation. Users who prefer the Templater community plugin MAY use its richer syntax inside template files as long as the reserved variables keep their brainkeeper meaning.
+- **Templates.** The `{{date}}` / `{{title}}` variables map onto Obsidian's Templates core plugin. The `_templates/` underscore-folder convention keeps templates visible in the sidebar (so they can be edited like any other note) while marking them as meta so brainkeeper tooling excludes them from indexing. Users who prefer the Templater community plugin MAY use its richer syntax inside template files as long as the reserved variables keep their brainkeeper meaning.
 
 brainkeeper vaults work equally well in Logseq, Silverbullet, and plain-text editors, provided the editor preserves YAML frontmatter and does not rewrite wikilinks into Markdown links.
 
