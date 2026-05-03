@@ -4,8 +4,8 @@ from pathlib import Path
 import frontmatter as fm_lib
 import pytest
 
-from brainkeeper_mcp.fs import StaleWriteError
-from brainkeeper_mcp.server import BrainkeeperServer
+from brainkeeper.core.fs import StaleWriteError
+from brainkeeper.mcp.server import BrainkeeperServer
 
 
 @pytest.fixture

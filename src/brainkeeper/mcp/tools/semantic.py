@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import frontmatter as fm_lib
 import yaml
 
-from ..frontmatter import FrontmatterParser
+from ...core.frontmatter import FrontmatterParser
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP

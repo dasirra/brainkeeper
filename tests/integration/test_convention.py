@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from brainkeeper_mcp.server import BrainkeeperServer
+from brainkeeper.mcp.server import BrainkeeperServer
 
 
 @pytest.fixture

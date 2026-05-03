@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from brainkeeper_mcp.fs import AtomicWriter, StaleWriteError
+from brainkeeper.core.fs import AtomicWriter, StaleWriteError
 
 
 def test_writes_new_file(tmp_path: Path):

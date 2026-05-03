@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from brainkeeper_mcp.config import Config, ConfigLoader
+from brainkeeper.core.config import Config, ConfigLoader
 
 
 def test_load_minimal(tmp_path: Path):

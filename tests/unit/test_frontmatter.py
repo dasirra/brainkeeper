@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from brainkeeper_mcp.frontmatter import (
+from brainkeeper.core.frontmatter import (
     FrontmatterParser, ValidationError, REQUIRED_FIELDS, DATE_FIELDS,
 )
 

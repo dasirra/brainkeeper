@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from brainkeeper_mcp.server import BrainkeeperServer
+from brainkeeper.mcp.server import BrainkeeperServer
 
 
 def test_server_constructs(minimal_vault: Path):

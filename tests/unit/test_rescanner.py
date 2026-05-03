@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from brainkeeper_mcp.index import Index
-from brainkeeper_mcp.rescanner import PeriodicRescanner
+from brainkeeper.core.index import Index
+from brainkeeper.core.rescanner import PeriodicRescanner
 
 
 def test_rescan_picks_up_added_file(minimal_vault: Path):

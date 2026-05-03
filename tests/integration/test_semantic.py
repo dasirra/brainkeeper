@@ -4,7 +4,7 @@ from pathlib import Path
 import frontmatter as fm_lib
 import pytest
 
-from brainkeeper_mcp.server import BrainkeeperServer
+from brainkeeper.mcp.server import BrainkeeperServer
 
 
 @pytest.fixture

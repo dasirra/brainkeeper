@@ -6,14 +6,14 @@ from pathlib import Path
 
 from fastmcp import FastMCP
 
-from .config import Config, ConfigLoader
-from .fs import AtomicWriter
-from .index import Index
-from .rescanner import PeriodicRescanner
+from ..core.config import Config, ConfigLoader
+from ..core.fs import AtomicWriter
+from ..core.index import Index
+from ..core.rescanner import PeriodicRescanner
+from ..core.watcher import FileWatcher
 from .tools.convention import register_convention
 from .tools.primitives import register_primitives
 from .tools.semantic import register_semantic
-from .watcher import FileWatcher
 
 
 INSTRUCTIONS = """\
@@ -22,18 +22,18 @@ brainkeeper MCP: structured markdown vault following the brainkeeper spec.
 ## Access rule
 
 ALL vault access goes through these tools. Do NOT use filesystem tools
-(Read, Write, Edit, Glob, Grep, Bash) on the vault path — the MCP encodes
+(Read, Write, Edit, Glob, Grep, Bash) on the vault path. The MCP encodes
 the spec contract and bypassing it produces non-compliant data.
 
 ## Vault concepts
 
 - **Six canonical layers** keyed by: `inbox, journal, projects, areas,
   brain, archive`. Resolve folder names via `list_layers` or
-  `read_convention` — never hardcode them.
+  `read_convention`. Never hardcode them.
 - **Tags are the only classification axis.** Each managed note carries
   ≥1 tag. Tags are freeform strings, lowercase kebab-case (e.g. `mcp`,
   `pkm`, `obsidian`). A `prefix/value` form is allowed but not
-  prescribed — use it if it helps you find notes later, skip it if it
+  prescribed; use it if it helps you find notes later, skip it if it
   doesn't.
 - **Frontmatter minimum**: every managed note requires `created` (ISO
   date), `updated` (ISO date, ≥ created), and `tags` (≥1 entry). Any

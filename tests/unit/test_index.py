@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from brainkeeper_mcp.index import Index, NoteMeta
+from brainkeeper.core.index import Index, NoteMeta
 
 
 def test_build_walks_vault(minimal_vault: Path):

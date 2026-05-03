@@ -1,8 +1,8 @@
 import time
 from pathlib import Path
 
-from brainkeeper_mcp.index import Index
-from brainkeeper_mcp.watcher import FileWatcher
+from brainkeeper.core.index import Index
+from brainkeeper.core.watcher import FileWatcher
 
 
 def test_create_event_updates_index(minimal_vault: Path):
