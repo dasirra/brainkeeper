@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/branding/logo.svg" alt="brainkeeper" width="160">
+</p>
+
 # brainkeeper
 
 [![CI](https://github.com/dasirra/brainkeeper/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dasirra/brainkeeper/actions/workflows/ci.yml)
@@ -160,6 +164,7 @@ brainkeeper/
 │   └── spec/               # bundled spec assets (installed alongside code)
 ├── tests/
 ├── docs/                   # design notes, plans
+│   └── branding/           # logo and brand assets
 ├── pyproject.toml
 ├── CHANGELOG.md
 └── README.md
