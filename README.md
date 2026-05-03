@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/branding/banner.jpg" alt="brainkeeper" width="800">
+  <img src="docs/branding/logo.svg" alt="brainkeeper" width="480">
 </p>
 
 # brainkeeper
