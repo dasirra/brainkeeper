@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="docs/branding/logo.svg" alt="brainkeeper" width="480">
+  <img src="https://raw.githubusercontent.com/dasirra/brainkeeper/main/docs/branding/logo.svg" alt="brainkeeper" width="480">
 </p>
 
 # brainkeeper
 
 [![CI](https://github.com/dasirra/brainkeeper/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dasirra/brainkeeper/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-2B2D42)](./pyproject.toml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-2B2D42.svg)](./LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-2B2D42)](https://github.com/dasirra/brainkeeper/blob/main/pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2B2D42.svg)](https://github.com/dasirra/brainkeeper/blob/main/LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 A standard for structured Markdown Second Brain vaults, plus a Python reference implementation that exposes the vault to LLMs through the Model Context Protocol (MCP).
@@ -136,9 +136,9 @@ The server's `instructions` block (sent to every connected client) covers the re
 
 ## The spec
 
-The format and lifecycle rules live in [`spec/SPEC.md`](./spec/SPEC.md). It is a standalone document. You do not need this Python package to build a brainkeeper-compatible tool: implement against the spec, validate `brainkeeper.yaml` against the [JSON Schema](./spec/schema/brainkeeper.schema.json), and you can interoperate.
+The format and lifecycle rules live in [`spec/SPEC.md`](https://github.com/dasirra/brainkeeper/blob/main/spec/SPEC.md). It is a standalone document. You do not need this Python package to build a brainkeeper-compatible tool: implement against the spec, validate `brainkeeper.yaml` against the [JSON Schema](https://github.com/dasirra/brainkeeper/blob/main/spec/schema/brainkeeper.schema.json), and you can interoperate.
 
-The current spec version is **v0.1.4**. See [`CHANGELOG.md`](./CHANGELOG.md) for revision history. Spec and package version independently.
+The current spec version is **v0.1.4**. See [`CHANGELOG.md`](https://github.com/dasirra/brainkeeper/blob/main/CHANGELOG.md) for revision history. Spec and package version independently.
 
 ## Limitations
 
@@ -172,11 +172,11 @@ brainkeeper/
 
 ## Links
 
-- **Spec**: [`spec/SPEC.md`](./spec/SPEC.md)
-- **Changelog**: [`CHANGELOG.md`](./CHANGELOG.md)
+- **Spec**: [`spec/SPEC.md`](https://github.com/dasirra/brainkeeper/blob/main/spec/SPEC.md)
+- **Changelog**: [`CHANGELOG.md`](https://github.com/dasirra/brainkeeper/blob/main/CHANGELOG.md)
 - **Issues**: <https://github.com/dasirra/brainkeeper/issues>
 - **Repository**: <https://github.com/dasirra/brainkeeper>
 
 ## License
 
-MIT. See [`LICENSE`](./LICENSE).
+MIT. See [`LICENSE`](https://github.com/dasirra/brainkeeper/blob/main/LICENSE).
