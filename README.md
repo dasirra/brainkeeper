@@ -13,7 +13,33 @@ A standard for structured Markdown Second Brain vaults, plus a Python reference 
 
 A brainkeeper vault is just a folder of Markdown files with YAML frontmatter, organized into six PARA-style layers (`inbox`, `journal`, `projects`, `areas`, `brain`, `archive`). The conventions are encoded once in a `brainkeeper.yaml` config at the vault root. From there, any tool that speaks the spec, including this MCP server, can read, write, and validate notes without breaking your structure.
 
-The package ships a CLI (`brainkeeper init`, `brainkeeper serve`), an MCP server, and a Python library. It runs locally, holds no state outside your vault, and is tool-agnostic at the format layer (Obsidian, Logseq, plain editors all work).
+The package ships a CLI (`brainkeeper init`, `brainkeeper serve`), an MCP server, and a Python library. It runs locally, holds no state outside your vault, and is tool-agnostic at the format layer (Obsidian, VS Code, `vim`, any plain text editor).
+
+## How it fits together
+
+brainkeeper sits between AI agents and your notes. Agents talk to the MCP server over stdio, which enforces the vault spec on every read and write. The vault itself is just a folder of plain Markdown files with YAML frontmatter, so any editor (Obsidian, VS Code, `vim`, anything that opens text files) sees the same data without going through the MCP.
+
+```mermaid
+flowchart LR
+    A["fa:fa-robot AI agents<br/><sub>Claude Code · Codex · OpenCode</sub>"]
+    M{{"fa:fa-shield-halved brainkeeper MCP"}}
+    V[("fa:fa-folder-open Vault<br/><sub>.md + frontmatter</sub>")]
+    E(["fa:fa-pen-to-square Editors<br/><sub>Obsidian · VS Code · vim</sub>"])
+
+    A -->|MCP / stdio| M
+    M -->|spec-enforced| V
+    V <-->|direct| E
+
+    classDef brand fill:#EF233C,stroke:#EF233C,color:#EDF2F4
+    classDef ink fill:#2B2D42,stroke:#2B2D42,color:#EDF2F4
+    classDef paper fill:#EDF2F4,stroke:#8D99AE,color:#2B2D42
+
+    class M brand
+    class V ink
+    class A,E paper
+```
+
+The MCP is the spec-enforcement layer for agent access; humans bypass it and read or edit files directly. Both views always see the same vault on disk.
 
 ## Quick start
 
