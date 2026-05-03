@@ -9,6 +9,28 @@ Two artifacts are versioned independently:
 - **`spec-vX.Y.Z`**: the brainkeeper specification (`spec/`).
 - **`brainkeeper-vX.Y.Z`**: the `brainkeeper` Python package, which contains the vault engine library, the MCP server, and the CLI.
 
+## [brainkeeper-v0.1.1] - 2026-05-03
+
+Docs, branding, and CI/CD polish. No public API or behavioral changes since v0.1.0.
+
+### Added
+- GitHub Actions CI workflow on push to `main` and on PRs: ruff lint, ruff format check, pytest matrix on Python 3.11 / 3.12 / 3.13, and a wheel build artifact.
+- GitHub Actions release workflow triggered on `brainkeeper-v*` tag push: same test gate, tag-vs-pyproject version verification, build, publish to PyPI via Trusted Publishing under a `pypi` environment, and a GitHub Release with notes extracted from this CHANGELOG.
+- Status badges in the README: CI, Python versions, License, Ruff.
+- Project logo (`docs/branding/logo.svg`) with truly transparent letterform holes (combined paths via `fill-rule="evenodd"`) for clean rendering on dark backgrounds.
+- Color palette reference (`docs/branding/palette.md`) documenting the five-color brand scheme.
+- Illustrated architecture diagram (`docs/branding/architecture.jpg`) showing the AI-agents to MCP to vault to editors flow.
+- New "Why an MCP layer?" section in the README laying out the consistency and velocity case for routing agents through the MCP rather than raw filesystem access.
+
+### Changed
+- README intro tightened from three paragraphs to two; the CLI is now documented in Quick start only. Phrasing updated to call out the six base PARA-style layers as extensible.
+- All in-repo references in the README converted to absolute GitHub URLs so the PyPI project page renders images and links correctly.
+- GitHub Action versions bumped past Node.js 20 deprecation: `actions/checkout@v6`, `astral-sh/setup-uv@v8.1.0`, `actions/upload-artifact@v7`, `actions/download-artifact@v8`, `softprops/action-gh-release@v3`.
+- Source files reformatted to comply with `ruff format`. Lint errors resolved (semicolon-joined statements, unused imports and locals).
+
+### Fixed
+- `release.yml` CHANGELOG-section extraction now uses literal prefix matching (`index($0, t) == 1`) instead of regex tilde matching, which previously interpreted the `[` and `]` in tag names as a character class and silently fell back to GitHub's auto-generated PR list. The v0.1.0 release body was retroactively corrected via `gh release edit`.
+
 ## [brainkeeper-v0.1.0] - 2026-05-02
 
 First public release of the `brainkeeper` Python package. Implements spec v0.1.4.
