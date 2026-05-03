@@ -93,8 +93,8 @@ jobs:
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          section=$(awk -v t="[$TAG_NAME]" '
-            $0 ~ "^## " t { found=1; next }
+          section=$(awk -v t="## [$TAG_NAME]" '
+            index($0, t) == 1 { found=1; next }
             found && /^## / { exit }
             found
           ' CHANGELOG.md)
