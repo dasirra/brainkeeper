@@ -9,11 +9,30 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-2B2D42.svg)](https://github.com/dasirra/brainkeeper/blob/main/LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-A standard for structured Markdown Second Brain vaults, plus a Python reference implementation that exposes the vault to LLMs through the Model Context Protocol (MCP).
+A standard for structured Markdown Second Brain vaults: a folder of `.md` files with YAML frontmatter, organized into six base PARA-style layers (extensible).
 
-A brainkeeper vault is just a folder of Markdown files with YAML frontmatter, organized into six PARA-style layers (`inbox`, `journal`, `projects`, `areas`, `brain`, `archive`). The conventions are encoded once in a `brainkeeper.yaml` config at the vault root. From there, any tool that speaks the spec, including this MCP server, can read, write, and validate notes without breaking your structure.
+brainkeeper sits between AI agents and your notes. The Model Context Protocol (MCP) server enforces the vault spec on every read and write that agents make, while you keep editing files directly with Obsidian, VS Code, or any text editor.
 
-The package ships a CLI (`brainkeeper init`, `brainkeeper serve`), an MCP server, and a Python library. It runs locally, holds no state outside your vault, and is tool-agnostic at the format layer (Obsidian, Logseq, plain editors all work).
+<p align="center">
+  <img src="https://raw.githubusercontent.com/dasirra/brainkeeper/main/docs/branding/architecture.jpg" alt="brainkeeper architecture: AI agents talk to brainkeeper MCP, which mediates access to the Vault; editors read and write the Vault directly" width="900">
+</p>
+
+## Why an MCP layer?
+
+The vault is just a folder of Markdown. You could skip brainkeeper entirely and point an agent at it with filesystem tools. That works for the first few notes. By the tenth, consistency starts to break: similar notes land in different folders, tags drift between forms (`pkm` vs `topic/pkm`), some files carry rich metadata and others have none, "deleted" notes keep their `active` status forever, and your edits race against the agent's. By the hundredth note, a second problem shows up: the agent has to scan the whole vault on every query, which gets slow and eats its context window with file paths and irrelevant content.
+
+brainkeeper prevents both. Every read and write the agent does goes through the MCP, which validates writes against the [spec](https://github.com/dasirra/brainkeeper/blob/main/spec/SPEC.md) and serves reads from a live in-memory index. Conventions hold no matter how the agent's session went last time, and lookups stay fast even as the vault grows past thousands of notes.
+
+| Without brainkeeper | With brainkeeper |
+| --- | --- |
+| Each note has its own structure | Every note follows the same structure |
+| The agent guesses which folder a note belongs to | Notes land in the right folder automatically |
+| Timestamps drift or get forgotten | Dates set on creation, refreshed on edit |
+| Deleting a note loses it | Deleted notes archive by year, with lifecycle preserved |
+| Your edits and the agent's overwrite each other | The agent can't overwrite changes you just made |
+| Searching the vault gets slower the more notes you have | Lookups stay fast at any vault size |
+
+Telling an LLM "follow these conventions" works inconsistently across sessions and degrades over time. brainkeeper enforces them at the protocol boundary, so the conventions hold whether the agent remembers them or not. Humans (and editors like Obsidian or VS Code) keep writing to the vault directly; only the agent side gets mediated.
 
 ## Quick start
 
