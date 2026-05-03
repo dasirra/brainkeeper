@@ -1,8 +1,12 @@
+<p align="center">
+  <img src="docs/branding/logo.svg" alt="brainkeeper" width="480">
+</p>
+
 # brainkeeper
 
 [![CI](https://github.com/dasirra/brainkeeper/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dasirra/brainkeeper/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](./pyproject.toml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-2B2D42)](./pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2B2D42.svg)](./LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 A standard for structured Markdown Second Brain vaults, plus a Python reference implementation that exposes the vault to LLMs through the Model Context Protocol (MCP).
@@ -160,6 +164,7 @@ brainkeeper/
 │   └── spec/               # bundled spec assets (installed alongside code)
 ├── tests/
 ├── docs/                   # design notes, plans
+│   └── branding/           # logo and brand assets
 ├── pyproject.toml
 ├── CHANGELOG.md
 └── README.md
