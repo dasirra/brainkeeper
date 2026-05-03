@@ -1,4 +1,5 @@
 """brainkeeper CLI dispatcher."""
+
 from __future__ import annotations
 import argparse
 import sys
@@ -16,13 +17,18 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     sp_serve = sub.add_parser("serve", help="Start the MCP server")
-    sp_serve.add_argument("--vault", type=Path, required=True,
-                          help="Path to vault root containing brainkeeper.yaml")
+    sp_serve.add_argument(
+        "--vault",
+        type=Path,
+        required=True,
+        help="Path to vault root containing brainkeeper.yaml",
+    )
     sp_serve.add_argument("-v", "--verbose", action="store_true")
 
     sp_init = sub.add_parser("init", help="Bootstrap a new vault")
-    sp_init.add_argument("path", type=Path,
-                         help="Path for the new vault root (created if absent)")
+    sp_init.add_argument(
+        "path", type=Path, help="Path for the new vault root (created if absent)"
+    )
 
     args = parser.parse_args(argv)
 

@@ -16,7 +16,11 @@ def srv(minimal_vault: Path) -> BrainkeeperServer:
 
 def _call(srv: BrainkeeperServer, tool_name: str, **kwargs):
     components = srv.mcp._local_provider._components
-    tool = next(t for k, t in components.items() if k.startswith("tool:") and t.name == tool_name)
+    tool = next(
+        t
+        for k, t in components.items()
+        if k.startswith("tool:") and t.name == tool_name
+    )
     return tool.fn(**kwargs)
 
 
@@ -25,14 +29,7 @@ def _make(vault: Path, rel: str, tags: list[str], extra: str = "") -> Path:
     p.parent.mkdir(parents=True, exist_ok=True)
     fm = "\n".join(f"  - {t}" for t in tags)
     body = (
-        "---\n"
-        "created: 2026-04-27\n"
-        "updated: 2026-04-27\n"
-        "tags:\n"
-        f"{fm}\n"
-        f"{extra}"
-        "---\n"
-        "body"
+        f"---\ncreated: 2026-04-27\nupdated: 2026-04-27\ntags:\n{fm}\n{extra}---\nbody"
     )
     p.write_text(body, encoding="utf-8")
     return p
@@ -44,7 +41,8 @@ def _make(vault: Path, rel: str, tags: list[str], extra: str = "") -> Path:
 def test_find_by_tag_exact_match(srv, minimal_vault):
     a = _make(minimal_vault, "40 Brain/a.md", ["topic/mcp", "domain/fitizens"])
     b = _make(minimal_vault, "40 Brain/b.md", ["topic/rag"])
-    srv.index.update(a); srv.index.update(b)
+    srv.index.update(a)
+    srv.index.update(b)
     out = _call(srv, "find_by_tag", tag="topic/mcp", prefix_match=False)
     paths = {item["path"] for item in out}
     assert paths == {"40 Brain/a.md"}
@@ -55,7 +53,9 @@ def test_find_by_tag_prefix_dimension_query(srv, minimal_vault):
     a = _make(minimal_vault, "40 Brain/a.md", ["topic/mcp"])
     b = _make(minimal_vault, "40 Brain/b.md", ["topic/rag"])
     c = _make(minimal_vault, "40 Brain/c.md", ["domain/x"])
-    srv.index.update(a); srv.index.update(b); srv.index.update(c)
+    srv.index.update(a)
+    srv.index.update(b)
+    srv.index.update(c)
     out = _call(srv, "find_by_tag", tag="topic/")
     paths = {item["path"] for item in out}
     assert paths == {"40 Brain/a.md", "40 Brain/b.md"}
@@ -134,7 +134,9 @@ def test_validate_frontmatter_flags_missing_updated(srv, minimal_vault):
 
 def test_validate_frontmatter_flags_updated_before_created(srv, minimal_vault):
     p = minimal_vault / "40 Brain" / "back.md"
-    p.write_text("---\ncreated: 2026-05-01\nupdated: 2026-04-01\ntags: [t/x]\n---\nbody")
+    p.write_text(
+        "---\ncreated: 2026-05-01\nupdated: 2026-04-01\ntags: [t/x]\n---\nbody"
+    )
     srv.index.update(p)
     out = _call(srv, "validate_frontmatter", path="40 Brain/back.md")
     assert out["valid"] is False
@@ -148,8 +150,8 @@ def test_validate_frontmatter_missing_file_raises(srv):
 
 def test_validate_frontmatter_works_on_unindexed_file(srv, minimal_vault):
     """Tool re-reads from disk, so it should validate even files the index hasn't seen."""
-    a = _make(minimal_vault, "40 Brain/fresh.md", ["topic/x"])
-    # Deliberately do NOT call srv.index.update(a)
+    _make(minimal_vault, "40 Brain/fresh.md", ["topic/x"])
+    # Deliberately do NOT call srv.index.update for this file
     out = _call(srv, "validate_frontmatter", path="40 Brain/fresh.md")
     assert out["valid"] is True
 
@@ -166,8 +168,12 @@ def test_update_frontmatter_patches_keys_and_refreshes_updated(srv, minimal_vaul
     a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"])
     # Edit so we have a known on-disk updated
     srv.index.update(a)
-    out = _call(srv, "update_frontmatter", path="40 Brain/n.md",
-                patch={"tags": ["topic/y", "new"]})
+    out = _call(
+        srv,
+        "update_frontmatter",
+        path="40 Brain/n.md",
+        patch={"tags": ["topic/y", "new"]},
+    )
     assert out["frontmatter"]["tags"] == ["topic/y", "new"]
     assert str(out["frontmatter"]["updated"])[:10] == today
     # Check on disk too
@@ -178,19 +184,17 @@ def test_update_frontmatter_patches_keys_and_refreshes_updated(srv, minimal_vaul
 def test_update_frontmatter_preserves_unspecified_keys(srv, minimal_vault):
     a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"], extra="custom_field: 42\n")
     srv.index.update(a)
-    _call(srv, "update_frontmatter", path="40 Brain/n.md",
-          patch={"new_field": "hello"})
+    _call(srv, "update_frontmatter", path="40 Brain/n.md", patch={"new_field": "hello"})
     fm = _read_fm(minimal_vault / "40 Brain" / "n.md")
     assert fm["custom_field"] == 42  # untouched
     assert fm["new_field"] == "hello"  # added
-    assert fm["tags"] == ["topic/x"]   # untouched
+    assert fm["tags"] == ["topic/x"]  # untouched
 
 
 def test_update_frontmatter_none_value_deletes_key(srv, minimal_vault):
     a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"], extra="legacy: gone\n")
     srv.index.update(a)
-    _call(srv, "update_frontmatter", path="40 Brain/n.md",
-          patch={"legacy": None})
+    _call(srv, "update_frontmatter", path="40 Brain/n.md", patch={"legacy": None})
     fm = _read_fm(minimal_vault / "40 Brain" / "n.md")
     assert "legacy" not in fm
 
@@ -200,8 +204,9 @@ def test_update_frontmatter_overrides_caller_updated(srv, minimal_vault):
     today = date.today().isoformat()
     a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"])
     srv.index.update(a)
-    out = _call(srv, "update_frontmatter", path="40 Brain/n.md",
-                patch={"updated": "2020-01-01"})
+    out = _call(
+        srv, "update_frontmatter", path="40 Brain/n.md", patch={"updated": "2020-01-01"}
+    )
     assert str(out["frontmatter"]["updated"])[:10] == today
 
 
@@ -209,8 +214,9 @@ def test_update_frontmatter_honors_caller_created(srv, minimal_vault):
     """`created` IS overridable via patch (unlike `updated`)."""
     a = _make(minimal_vault, "40 Brain/n.md", ["topic/x"])
     srv.index.update(a)
-    out = _call(srv, "update_frontmatter", path="40 Brain/n.md",
-                patch={"created": "2024-06-15"})
+    out = _call(
+        srv, "update_frontmatter", path="40 Brain/n.md", patch={"created": "2024-06-15"}
+    )
     assert str(out["frontmatter"]["created"])[:10] == "2024-06-15"
 
 
@@ -219,8 +225,9 @@ def test_update_frontmatter_brings_unmanaged_into_compliance(srv, minimal_vault)
     today = date.today().isoformat()
     p = minimal_vault / "40 Brain" / "raw.md"
     p.write_text("just bytes, no frontmatter")
-    out = _call(srv, "update_frontmatter", path="40 Brain/raw.md",
-                patch={"tags": ["new"]})
+    out = _call(
+        srv, "update_frontmatter", path="40 Brain/raw.md", patch={"tags": ["new"]}
+    )
     assert out["frontmatter"]["tags"] == ["new"]
     assert str(out["frontmatter"]["created"])[:10] == today
     assert str(out["frontmatter"]["updated"])[:10] == today
@@ -244,7 +251,9 @@ def test_list_tags_aggregates_counts_across_notes(srv, minimal_vault):
     a = _make(minimal_vault, "40 Brain/a.md", ["mcp", "pkm"])
     b = _make(minimal_vault, "40 Brain/b.md", ["mcp", "rag"])
     c = _make(minimal_vault, "40 Brain/c.md", ["pkm"])
-    srv.index.update(a); srv.index.update(b); srv.index.update(c)
+    srv.index.update(a)
+    srv.index.update(b)
+    srv.index.update(c)
     out = _call(srv, "list_tags")
     counts = {item["name"]: item["count"] for item in out}
     assert counts == {"mcp": 2, "pkm": 2, "rag": 1}

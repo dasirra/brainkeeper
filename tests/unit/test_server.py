@@ -13,7 +13,9 @@ def test_server_constructs(minimal_vault: Path):
 
 def test_server_starts_and_indexes_existing_notes(minimal_vault: Path):
     n = minimal_vault / "40 Brain" / "preexisting.md"
-    n.write_text("---\ntype: knowledge\nstatus: active\ncreated: 2026-04-27\ntags: [topic/x]\n---\n")
+    n.write_text(
+        "---\ntype: knowledge\nstatus: active\ncreated: 2026-04-27\ntags: [topic/x]\n---\n"
+    )
     srv = BrainkeeperServer(vault=minimal_vault)
     srv.start_infrastructure()
     try:

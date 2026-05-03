@@ -30,18 +30,39 @@ import frontmatter
 
 
 CANONICAL_LAYERS: tuple[str, ...] = (
-    "inbox", "journal", "projects", "areas", "brain", "archive",
+    "inbox",
+    "journal",
+    "projects",
+    "areas",
+    "brain",
+    "archive",
 )
 REQUIRED_FRONTMATTER_FIELDS: tuple[str, ...] = (
-    "type", "status", "created", "tags",
+    "type",
+    "status",
+    "created",
+    "tags",
 )
-ALLOWED_TYPES: frozenset[str] = frozenset((
-    "project", "area", "idea", "journal",
-    "meeting", "note", "resource", "knowledge",
-))
-ALLOWED_STATUSES: frozenset[str] = frozenset((
-    "active", "paused", "completed", "archived",
-))
+ALLOWED_TYPES: frozenset[str] = frozenset(
+    (
+        "project",
+        "area",
+        "idea",
+        "journal",
+        "meeting",
+        "note",
+        "resource",
+        "knowledge",
+    )
+)
+ALLOWED_STATUSES: frozenset[str] = frozenset(
+    (
+        "active",
+        "paused",
+        "completed",
+        "archived",
+    )
+)
 
 _JD_PREFIX = re.compile(r"^\d+\s+")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -66,8 +87,7 @@ class Check:
 
 def _iter_top_level_dirs(vault: Path) -> list[Path]:
     return sorted(
-        p for p in vault.iterdir()
-        if p.is_dir() and not p.name.startswith(".")
+        p for p in vault.iterdir() if p.is_dir() and not p.name.startswith(".")
     )
 
 
@@ -123,7 +143,8 @@ def check_structure(vault: Path) -> Check:
 
     missing = [k for k in CANONICAL_LAYERS if k not in mapping]
     loose_md = sorted(
-        p for p in vault.iterdir()
+        p
+        for p in vault.iterdir()
         if p.is_file() and p.suffix == ".md" and not p.name.startswith(".")
     )
 
@@ -153,7 +174,11 @@ def check_structure(vault: Path) -> Check:
         rows += [f"- `{d.name}/` -> `{key}`" for key, d in duplicates]
 
     if loose_md:
-        rows += ["", "**Loose .md files at vault root** (should live inside a layer):", ""]
+        rows += [
+            "",
+            "**Loose .md files at vault root** (should live inside a layer):",
+            "",
+        ]
         rows += [f"- `{f.name}`" for f in loose_md]
 
     return Check("Structure", headline, "\n".join(rows))
@@ -200,8 +225,7 @@ def check_frontmatter_coverage(vault: Path) -> Check:
             any_fm += 1
 
         missing_here = [
-            field for field in REQUIRED_FRONTMATTER_FIELDS
-            if not meta.get(field)
+            field for field in REQUIRED_FRONTMATTER_FIELDS if not meta.get(field)
         ]
         if not missing_here:
             fully_compliant += 1
@@ -262,8 +286,7 @@ def check_enums(vault: Path) -> Check:
         counts = Counter(v for v, _ in bad_types)
         for value, n in counts.most_common():
             examples = [
-                f"`{p.relative_to(vault)}`"
-                for v, p in bad_types if v == value
+                f"`{p.relative_to(vault)}`" for v, p in bad_types if v == value
             ][:3]
             lines.append(f"- `{value}` ({n}): {', '.join(examples)}")
     if bad_statuses:
@@ -274,8 +297,7 @@ def check_enums(vault: Path) -> Check:
         counts = Counter(v for v, _ in bad_statuses)
         for value, n in counts.most_common():
             examples = [
-                f"`{p.relative_to(vault)}`"
-                for v, p in bad_statuses if v == value
+                f"`{p.relative_to(vault)}`" for v, p in bad_statuses if v == value
             ][:3]
             lines.append(f"- `{value}` ({n}): {', '.join(examples)}")
 
@@ -340,8 +362,11 @@ def check_naming(vault: Path) -> Check:
         if not (layer_dir and layer_dir.is_dir()):
             continue
         offenders = [
-            d for d in layer_dir.iterdir()
-            if d.is_dir() and not d.name.startswith(".") and _LEADING_DIGIT.match(d.name)
+            d
+            for d in layer_dir.iterdir()
+            if d.is_dir()
+            and not d.name.startswith(".")
+            and _LEADING_DIGIT.match(d.name)
         ]
         if offenders:
             bad_layer_folders[key] = sorted(offenders)
@@ -453,15 +478,11 @@ def check_tags(vault: Path) -> Check:
     headline = f"**{len(bad)} tag-grammar violations across the vault.**"
     counts = Counter(t for t, _ in bad)
     lines = [
-        f"**{len(counts)} distinct violating tag values "
-        f"(top 30 by frequency):**",
+        f"**{len(counts)} distinct violating tag values (top 30 by frequency):**",
         "",
     ]
     for tag, n in counts.most_common(30):
-        examples = [
-            f"`{p.relative_to(vault)}`"
-            for t, p in bad if t == tag
-        ][:3]
+        examples = [f"`{p.relative_to(vault)}`" for t, p in bad if t == tag][:3]
         lines.append(f"- `{tag}` ({n} uses): {', '.join(examples)}")
     if len(counts) > 30:
         lines.append(f"- _... {len(counts) - 30} more distinct values_")
@@ -548,7 +569,9 @@ def check_archive(vault: Path) -> Check:
 
     lines: list[str] = []
     if other_folders:
-        lines.append(f"**'Other' folders (likely not projects) ({len(other_folders)}):**")
+        lines.append(
+            f"**'Other' folders (likely not projects) ({len(other_folders)}):**"
+        )
         lines.append("")
         for p in other_folders[:20]:
             lines.append(f"- `{p.relative_to(vault)}/`")
@@ -557,7 +580,9 @@ def check_archive(vault: Path) -> Check:
     if loose_files:
         if lines:
             lines.append("")
-        lines.append(f"**Loose .md files directly under archive ({len(loose_files)}):**")
+        lines.append(
+            f"**Loose .md files directly under archive ({len(loose_files)}):**"
+        )
         lines.append("")
         for p in loose_files[:20]:
             lines.append(f"- `{p.relative_to(vault)}`")
@@ -619,7 +644,9 @@ def check_templates(vault: Path) -> Check:
     if legacy:
         if lines:
             lines.append("")
-        lines.append("**Legacy template locations (should migrate to `<layer>/_templates/`):**")
+        lines.append(
+            "**Legacy template locations (should migrate to `<layer>/_templates/`):**"
+        )
         lines.append("")
         for d in sorted(legacy):
             lines.append(f"- `{d.relative_to(vault)}/`")
@@ -782,12 +809,14 @@ def render(vault: Path, results: list[Check]) -> str:
         "",
     ]
     for i, c in enumerate(results, start=1):
-        lines.extend([
-            f"## {i}. {c.name}",
-            "",
-            c.headline,
-            "",
-        ])
+        lines.extend(
+            [
+                f"## {i}. {c.name}",
+                "",
+                c.headline,
+                "",
+            ]
+        )
         if c.details:
             lines.extend([c.details, ""])
     return "\n".join(lines)
@@ -804,7 +833,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("vault", type=Path, help="Path to the vault root.")
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         type=Path,
         default=None,
         help="Report output path. Default: ~/vault-audit-YYYY-MM-DD.md",

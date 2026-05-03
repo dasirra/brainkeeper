@@ -15,13 +15,22 @@ from pydantic import BaseModel, Field
 def _find_schema() -> Path:
     # Path inside an installed wheel (where force-include populated brainkeeper/spec/)
     via_package = Path(
-        str(importlib.resources.files("brainkeeper.spec") / "schema" / "brainkeeper.schema.json")
+        str(
+            importlib.resources.files("brainkeeper.spec")
+            / "schema"
+            / "brainkeeper.schema.json"
+        )
     )
     if via_package.exists():
         return via_package
     # Dev fallback: src/brainkeeper/core/config.py walks up to repo root
     # parents: [0]=core/, [1]=brainkeeper/, [2]=src/, [3]=repo root
-    dev_path = Path(__file__).resolve().parents[3] / "spec" / "schema" / "brainkeeper.schema.json"
+    dev_path = (
+        Path(__file__).resolve().parents[3]
+        / "spec"
+        / "schema"
+        / "brainkeeper.schema.json"
+    )
     if dev_path.exists():
         return dev_path
     raise FileNotFoundError(
@@ -77,9 +86,7 @@ class ConfigLoader:
 
     def __init__(self, vault_root: Path) -> None:
         self.vault_root = Path(vault_root)
-        self._validator = Draft202012Validator(
-            json.loads(_SCHEMA_PATH.read_text())
-        )
+        self._validator = Draft202012Validator(json.loads(_SCHEMA_PATH.read_text()))
 
     def load(self) -> Config:
         path = self.vault_root / "brainkeeper.yaml"

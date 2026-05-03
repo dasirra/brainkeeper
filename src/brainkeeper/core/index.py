@@ -59,7 +59,8 @@ class Index:
     def by_tag(self, tag: str) -> list[NoteMeta]:
         with self._lock:
             return [
-                m for m in self._notes.values()
+                m
+                for m in self._notes.values()
                 if isinstance(m.frontmatter.get("tags"), list)
                 and tag in m.frontmatter["tags"]
             ]
@@ -67,14 +68,16 @@ class Index:
     def by_status(self, status: str) -> list[NoteMeta]:
         with self._lock:
             return [
-                m for m in self._notes.values()
+                m
+                for m in self._notes.values()
                 if str(m.frontmatter.get("status")) == status
             ]
 
     def by_type(self, type_value: str) -> list[NoteMeta]:
         with self._lock:
             return [
-                m for m in self._notes.values()
+                m
+                for m in self._notes.values()
                 if str(m.frontmatter.get("type")) == type_value
             ]
 
@@ -94,5 +97,8 @@ class Index:
         except OSError:
             return
         self._notes[path] = NoteMeta(
-            path=path, frontmatter=meta, mtime=mtime, validation_errors=errors,
+            path=path,
+            frontmatter=meta,
+            mtime=mtime,
+            validation_errors=errors,
         )

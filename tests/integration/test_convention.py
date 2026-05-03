@@ -16,7 +16,11 @@ def srv(minimal_vault: Path) -> BrainkeeperServer:
 def _call(srv: BrainkeeperServer, tool_name: str, **kwargs):
     """Invoke a registered FastMCP tool by calling the underlying function."""
     components = srv.mcp._local_provider._components
-    tool = next(t for k, t in components.items() if k.startswith("tool:") and t.name == tool_name)
+    tool = next(
+        t
+        for k, t in components.items()
+        if k.startswith("tool:") and t.name == tool_name
+    )
     return tool.fn(**kwargs)
 
 

@@ -1,12 +1,17 @@
 """vault init subcommand."""
+
 from __future__ import annotations
 import importlib.resources
 import sys
 from pathlib import Path
 
 _LAYER_DIRS = [
-    "00 Inbox", "10 Journal", "20 Projects",
-    "30 Areas", "40 Brain", "90 Archive",
+    "00 Inbox",
+    "10 Journal",
+    "20 Projects",
+    "30 Areas",
+    "40 Brain",
+    "90 Archive",
 ]
 
 
@@ -17,7 +22,9 @@ def _find_minimal_yaml() -> Path:
     if via_package.exists():
         return via_package
     # Dev fallback
-    dev_path = Path(__file__).resolve().parents[3] / "spec" / "examples" / "minimal.yaml"
+    dev_path = (
+        Path(__file__).resolve().parents[3] / "spec" / "examples" / "minimal.yaml"
+    )
     if dev_path.exists():
         return dev_path
     raise FileNotFoundError("minimal.yaml not found. Run `pip install -e .` first.")

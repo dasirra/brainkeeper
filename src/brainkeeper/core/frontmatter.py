@@ -53,11 +53,15 @@ class FrontmatterParser:
         created = meta.get("created")
         updated = meta.get("updated")
         if (
-            isinstance(created, str) and isinstance(updated, str)
-            and _DATE_RE.match(created) and _DATE_RE.match(updated)
+            isinstance(created, str)
+            and isinstance(updated, str)
+            and _DATE_RE.match(created)
+            and _DATE_RE.match(updated)
             and updated < created
         ):
-            errors.append(f"`updated` ({updated}) is earlier than `created` ({created})")
+            errors.append(
+                f"`updated` ({updated}) is earlier than `created` ({created})"
+            )
 
         tags = meta.get("tags")
         if isinstance(tags, list):

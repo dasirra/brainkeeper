@@ -6,7 +6,7 @@ from brainkeeper.core.config import Config, ConfigLoader
 
 
 def test_load_minimal(tmp_path: Path):
-    yaml = (tmp_path / "brainkeeper.yaml")
+    yaml = tmp_path / "brainkeeper.yaml"
     yaml.write_text("""
 layers:
   inbox: "00 Inbox"

@@ -1,9 +1,10 @@
 from pathlib import Path
 
-import pytest
 
 from brainkeeper.core.frontmatter import (
-    FrontmatterParser, ValidationError, REQUIRED_FIELDS, DATE_FIELDS,
+    FrontmatterParser,
+    REQUIRED_FIELDS,
+    DATE_FIELDS,
 )
 
 
@@ -57,64 +58,91 @@ def test_validate_required_fields_missing(tmp_path: Path):
 def test_validate_no_type_required():
     """Spec v0.1.3 dropped `type` — its absence MUST NOT raise an error."""
     parser = FrontmatterParser()
-    errors = parser.validate({
-        "created": "2026-04-27", "updated": "2026-04-27", "tags": ["t/x"],
-    })
+    errors = parser.validate(
+        {
+            "created": "2026-04-27",
+            "updated": "2026-04-27",
+            "tags": ["t/x"],
+        }
+    )
     assert errors == []
 
 
 def test_validate_no_status_required():
     """Spec v0.1.3 dropped `status` — its absence MUST NOT raise an error."""
     parser = FrontmatterParser()
-    errors = parser.validate({
-        "created": "2026-04-27", "updated": "2026-04-27", "tags": ["t/x"],
-    })
+    errors = parser.validate(
+        {
+            "created": "2026-04-27",
+            "updated": "2026-04-27",
+            "tags": ["t/x"],
+        }
+    )
     assert errors == []
 
 
 def test_validate_extension_field_ignored():
     """A user field like `status: complete` (non-spec value) MUST NOT raise."""
     parser = FrontmatterParser()
-    errors = parser.validate({
-        "created": "2026-04-27", "updated": "2026-04-27", "tags": ["t/x"],
-        "status": "complete",  # extension field, value not in any spec enum
-        "type": "lesson",       # extension field, value not in any spec enum
-    })
+    errors = parser.validate(
+        {
+            "created": "2026-04-27",
+            "updated": "2026-04-27",
+            "tags": ["t/x"],
+            "status": "complete",  # extension field, value not in any spec enum
+            "type": "lesson",  # extension field, value not in any spec enum
+        }
+    )
     assert errors == []
 
 
 def test_validate_bad_date_format():
     parser = FrontmatterParser()
-    errors = parser.validate({
-        "created": "April 27 2026", "updated": "2026-04-27", "tags": ["t/x"],
-    })
+    errors = parser.validate(
+        {
+            "created": "April 27 2026",
+            "updated": "2026-04-27",
+            "tags": ["t/x"],
+        }
+    )
     assert any("created" in e for e in errors)
 
 
 def test_validate_updated_before_created():
     """`updated` MUST be ≥ `created` per §6."""
     parser = FrontmatterParser()
-    errors = parser.validate({
-        "created": "2026-04-27", "updated": "2026-04-26", "tags": ["t/x"],
-    })
+    errors = parser.validate(
+        {
+            "created": "2026-04-27",
+            "updated": "2026-04-26",
+            "tags": ["t/x"],
+        }
+    )
     assert any("updated" in e and "earlier" in e for e in errors)
 
 
 def test_validate_updated_equal_to_created_ok():
     """`updated == created` is allowed (newly written, never edited)."""
     parser = FrontmatterParser()
-    errors = parser.validate({
-        "created": "2026-04-27", "updated": "2026-04-27", "tags": ["t/x"],
-    })
+    errors = parser.validate(
+        {
+            "created": "2026-04-27",
+            "updated": "2026-04-27",
+            "tags": ["t/x"],
+        }
+    )
     assert errors == []
 
 
 def test_validate_tag_grammar():
     parser = FrontmatterParser()
-    errors = parser.validate({
-        "created": "2026-04-27", "updated": "2026-04-27",
-        "tags": ["topic/MCP", "good-tag", "bad_tag"],
-    })
+    errors = parser.validate(
+        {
+            "created": "2026-04-27",
+            "updated": "2026-04-27",
+            "tags": ["topic/MCP", "good-tag", "bad_tag"],
+        }
+    )
     # 2 violations: uppercase MCP, snake_case bad_tag
     assert sum(1 for e in errors if "tag" in e) == 2
 

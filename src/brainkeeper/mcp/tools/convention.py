@@ -50,7 +50,8 @@ def register_convention(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
         for key in CANONICAL_KEYS:
             opts = getattr(srv.config.layers, key)
             options = {
-                k: v for k, v in opts.model_dump().items()
+                k: v
+                for k, v in opts.model_dump().items()
                 if k != "path" and v is not None
             }
             out.append({"key": key, "path": opts.path, "options": options})
@@ -70,7 +71,9 @@ def register_convention(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
         }
 
     @mcp.tool()
-    def resolve_path(intent: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def resolve_path(
+        intent: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Resolve a capture intent to a target path + mode + optional anchor."""
         params = params or {}
         routing = srv.config.capture_routing

@@ -98,7 +98,9 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
                     existing = fm_lib.load(p).metadata or {}
                     if "created" in existing:
                         v = existing["created"]
-                        fm["created"] = v.isoformat()[:10] if hasattr(v, "isoformat") else str(v)
+                        fm["created"] = (
+                            v.isoformat()[:10] if hasattr(v, "isoformat") else str(v)
+                        )
                 except Exception:
                     pass
             fm.setdefault("created", today)
@@ -157,7 +159,9 @@ def register_primitives(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
                     if hasattr(v, "isoformat"):
                         meta[k] = v.isoformat()[:10]
                 meta["updated"] = date.today().isoformat()
-                fm_text = yaml.safe_dump(meta, sort_keys=False, allow_unicode=True).rstrip()
+                fm_text = yaml.safe_dump(
+                    meta, sort_keys=False, allow_unicode=True
+                ).rstrip()
                 new_content = f"---\n{fm_text}\n---\n{post.content}"
                 srv.writer.write_atomic(target, new_content)
                 p.unlink()

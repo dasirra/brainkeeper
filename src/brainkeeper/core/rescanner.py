@@ -12,7 +12,9 @@ log = logging.getLogger(__name__)
 
 
 class PeriodicRescanner:
-    def __init__(self, vault_root: Path, index: Index, interval_seconds: int = 300) -> None:
+    def __init__(
+        self, vault_root: Path, index: Index, interval_seconds: int = 300
+    ) -> None:
         self.vault_root = Path(vault_root)
         self.index = index
         self.interval = interval_seconds
