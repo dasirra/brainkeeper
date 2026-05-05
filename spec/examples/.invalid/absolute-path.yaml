@@ -6,6 +6,3 @@ layers:
   areas:    "30 Areas"
   brain:    "40 Brain"
   archive:  "90 Archive"
-
-capture_routing:
-  default: "00 Inbox/"

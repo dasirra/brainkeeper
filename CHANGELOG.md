@@ -15,7 +15,7 @@ Capture-intent mechanism removed. The MCP no longer prescribes how callers choos
 
 ### Changed
 - **Breaking:** `resolve_path` MCP tool removed. Callers determine target paths using `list_layers`, `read_convention`, and the tag/folder conventions in the spec, then write through `write_note_atomic` directly.
-- Tool count drops from 13 to 12. The convention layer now exposes three tools: `read_convention`, `list_layers`, `get_template`.
+- Tool count drops from 14 to 13. The convention layer now exposes three tools: `read_convention`, `list_layers`, `get_template`.
 - `Config.capture_routing` field removed from the `core` library API. Code that read `srv.config.capture_routing` must be updated.
 - Server `instructions=` block updated: the "capture a new note" workflow no longer references `resolve_path`, and the routing-fallback note is gone.
 

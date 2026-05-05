@@ -1,4 +1,4 @@
-# INVALID: `domains` is no longer an accepted root key; additionalProperties:false rejects it.
+# INVALID: `domains` is not an accepted root key; additionalProperties:false rejects it.
 layers:
   inbox:    "00 Inbox"
   journal:  "10 Journal"
@@ -6,9 +6,6 @@ layers:
   areas:    "30 Areas"
   brain:    "40 Brain"
   archive:  "90 Archive"
-
-capture_routing:
-  default: "00 Inbox/"
 
 domains:
   - fitizens

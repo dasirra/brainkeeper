@@ -120,7 +120,7 @@ The CLI is the user surface. The MCP server is what your LLM talks to. The libra
 
 ## MCP tool surface
 
-The server registers twelve tools across three layers. All vault access goes through these; bypassing them with raw filesystem tools produces non-compliant data.
+The server registers thirteen tools across three layers. All vault access goes through these; bypassing them with raw filesystem tools produces non-compliant data.
 
 **Primitives** (file operations):
 
