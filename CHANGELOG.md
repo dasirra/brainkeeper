@@ -9,6 +9,12 @@ Two artifacts are versioned independently:
 - **`spec-vX.Y.Z`**: the brainkeeper specification (`spec/`).
 - **`brainkeeper-vX.Y.Z`**: the `brainkeeper` Python package, which contains the vault engine library, the MCP server, and the CLI.
 
+## [brainkeeper-v0.2.1] - 2026-05-05
+
+### Added
+- First MCP **prompts** surface for the project. New `src/brainkeeper/mcp/prompts/` module wired into `BrainkeeperServer.__init__` alongside the three tool registrations.
+- `triage_inbox` MCP prompt. Walks the agent through reviewing every managed note in the `inbox` layer and proposing a destination per note (move, archive, or keep). Arguments: `older_than_days` (optional age filter on `created`), `limit` (default 20), `dry_run` (default true). With `dry_run=true` the prompt forbids calling `move_note`/`delete_note`; the user re-invokes with `dry_run=false` to apply, after explicit in-chat confirmation. The prompt enforces a "no new folders" constraint: every proposed destination must live inside an existing folder within a configured layer.
+
 ## [brainkeeper-v0.2.0] - 2026-05-05
 
 Capture-intent mechanism removed. The MCP no longer prescribes how callers choose where a captured note lands; the agent picks the target path directly.
@@ -125,6 +131,7 @@ First public release of the `brainkeeper` Python package. Implements spec v0.1.4
 - Archive semantics narrowed to completed projects only; retired Areas are deleted or distilled into Brain, not archived.
 - Domain tags: cardinality relaxed to 0..n (optional but recommended); vocabulary derived from folders under `projects/` and `areas/` rather than an enumerated list in the config.
 
+[brainkeeper-v0.2.1]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.1
 [spec-v0.2.0]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.2.0
 [brainkeeper-v0.2.0]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.0
 [spec-v0.1.4]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.1.4

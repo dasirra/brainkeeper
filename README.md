@@ -152,6 +152,14 @@ The server registers thirteen tools across three layers. All vault access goes t
 
 The server's `instructions` block (sent to every connected client) covers the recommended workflow and the access rule.
 
+## MCP prompts
+
+In addition to tools, the server exposes prompts (slash commands the user invokes from their MCP client):
+
+| Prompt | Description |
+| --- | --- |
+| `triage_inbox` | Walk the inbox layer and propose a destination for each managed note. |
+
 ## The spec
 
 The format and lifecycle rules live in [`spec/SPEC.md`](https://github.com/dasirra/brainkeeper/blob/main/spec/SPEC.md). It is a standalone document. You do not need this Python package to build a brainkeeper-compatible tool: implement against the spec, validate `brainkeeper.yaml` against the [JSON Schema](https://github.com/dasirra/brainkeeper/blob/main/spec/schema/brainkeeper.schema.json), and you can interoperate.
