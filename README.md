@@ -158,7 +158,7 @@ In addition to tools, the server exposes prompts (slash commands the user invoke
 
 | Prompt | Description |
 | --- | --- |
-| `triage_inbox` | Walk the inbox layer and propose a destination for each managed note. Args: `older_than_days` (filter by `created` age), `limit` (default 20), `dry_run` (default true; set false to apply moves). |
+| `triage_inbox` | Walk the inbox layer and propose a destination for each managed note. |
 
 ## The spec
 

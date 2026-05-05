@@ -12,8 +12,8 @@ Two artifacts are versioned independently:
 ## [brainkeeper-v0.2.1] - 2026-05-05
 
 ### Added
-- `triage_inbox` MCP prompt. Walks the agent through reviewing every managed note in the `inbox` layer and proposing a destination per note (move, archive, or keep). Arguments: `older_than_days` (optional age filter on `created`), `limit` (default 20), `dry_run` (default true). With `dry_run=true` the prompt forbids calling `move_note`/`delete_note`; the user re-invokes with `dry_run=false` to apply, after explicit in-chat confirmation. The prompt enforces a "no new folders" constraint: every proposed destination must live inside an existing folder within a configured layer.
 - First MCP **prompts** surface for the project. New `src/brainkeeper/mcp/prompts/` module wired into `BrainkeeperServer.__init__` alongside the three tool registrations.
+- `triage_inbox` MCP prompt. Walks the agent through reviewing every managed note in the `inbox` layer and proposing a destination per note (move, archive, or keep). Arguments: `older_than_days` (optional age filter on `created`), `limit` (default 20), `dry_run` (default true). With `dry_run=true` the prompt forbids calling `move_note`/`delete_note`; the user re-invokes with `dry_run=false` to apply, after explicit in-chat confirmation. The prompt enforces a "no new folders" constraint: every proposed destination must live inside an existing folder within a configured layer.
 
 ## [brainkeeper-v0.2.0] - 2026-05-05
 

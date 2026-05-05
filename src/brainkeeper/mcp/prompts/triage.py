@@ -15,10 +15,10 @@ def _build_triage_inbox_body(
     limit: int,
     dry_run: bool,
 ) -> str:
-    age_clause = (
-        f"Filter the list to notes whose `created` frontmatter is at least "
-        f"{older_than_days} days old. Compare each note's `created` date "
-        f"to today's date and skip newer ones.\n"
+    age_filter = (
+        f"   - Filter to notes whose `created` frontmatter is at least "
+        f"{older_than_days} days old (compare each `created` date to today; "
+        f"skip newer ones).\n"
         if older_than_days is not None
         else ""
     )
@@ -39,18 +39,18 @@ Process notes in the brainkeeper `inbox` layer and propose a destination for eac
 
 ## Procedure
 
-1. Resolve the inbox path: call `list_layers` and pick the entry with `key="inbox"`.
-2. List managed notes in that layer with `list_notes(layer="inbox")`.
-{age_clause}3. For each of the first {limit} notes (in the order returned):
+1. Call `list_layers` and capture the `path` value of the entry with `key="inbox"`. Call this `INBOX`.
+2. List managed notes under that path: `list_notes(glob=f"{{INBOX}}/**/*.md")`.
+{age_filter}3. For each of the first {limit} notes (in the order returned):
    - Read it with `read_note(path)`.
    - Validate the frontmatter with `validate_frontmatter(path)`. If invalid, set this note aside as "needs frontmatter" and do not propose a move.
    - Gather signals from tags, filename, and body content:
-     - Tag prefixes like `project/<slug>` suggest folders inside `projects/`.
-     - Tag prefixes like `area/<slug>` suggest folders inside `areas/`.
+     - Tag prefixes like `project/<slug>` suggest folders inside the `projects` layer.
+     - Tag prefixes like `area/<slug>` suggest folders inside the `areas` layer.
      - Filename pattern `YYYY-MM-DD` suggests `journal/`.
      - Filename ending in `Index.md` suggests an area or project entry-point.
      - Body content is context only, not authoritative.
-   - Verify each candidate folder actually exists with `list_notes(layer=...)` before proposing it.
+   - To verify a candidate folder exists, list its contents with `list_notes(glob=f"{{candidate}}/**/*.md")`. Only propose paths inside folders that return at least one note (or whose parent layer you have already inspected and confirmed contains the folder).
    - Propose ONE of:
      - `move`: a path inside an *existing* folder in one of the configured layers.
      - `archive`: soft-delete (the file moves to `<archive>/<YYYY>/`).
@@ -78,10 +78,10 @@ After the main table, list any notes that were set aside:
 """
 
 
-def register_prompts(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
-    # `srv` is captured for parity with tool registration; v1 prompts are
-    # static workflows that don't read live vault state at render time.
-    del srv
+def register_prompts(mcp: "FastMCP", _srv: "BrainkeeperServer") -> None:
+    # `_srv` is unused: v1 prompts are static workflows that do not read live
+    # vault state at render time. Kept in the signature for parity with the
+    # tool registration functions.
 
     @mcp.prompt()
     def triage_inbox(
@@ -89,18 +89,5 @@ def register_prompts(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
         limit: int = 20,
         dry_run: bool = True,
     ) -> str:
-        """Walk the inbox layer and propose a destination for each managed note.
-
-        The prompt returns a workflow the agent should follow using existing
-        brainkeeper tools (`list_layers`, `list_notes`, `read_note`,
-        `validate_frontmatter`, `move_note`, `delete_note`). It does not embed
-        live inbox state.
-
-        Args:
-            older_than_days: Only triage notes whose `created` frontmatter is
-                at least this many days old. Default: no age filter.
-            limit: Maximum number of notes to process per invocation. Default 20.
-            dry_run: When true (default), propose moves but do not apply them.
-                Re-invoke with `dry_run=false` to apply after user confirmation.
-        """
+        """Walk the inbox layer and propose a destination for each managed note. The prompt returns a workflow the agent follows using existing tools (`list_layers`, `list_notes`, `read_note`, `validate_frontmatter`, `move_note`, `delete_note`); it does not embed live inbox state. `older_than_days` filters to notes at least N days old. `limit` caps the per-invocation count (default 20). `dry_run=true` (default) forbids `move_note`/`delete_note`; re-invoke with `dry_run=false` to apply after user confirmation."""
         return _build_triage_inbox_body(older_than_days, limit, dry_run)
