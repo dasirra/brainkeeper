@@ -11,6 +11,7 @@ from ..core.fs import AtomicWriter
 from ..core.index import Index
 from ..core.rescanner import PeriodicRescanner
 from ..core.watcher import FileWatcher
+from .prompts.triage import register_prompts
 from .tools.convention import register_convention
 from .tools.primitives import register_primitives
 from .tools.semantic import register_semantic
@@ -83,6 +84,7 @@ class BrainkeeperServer:
         register_primitives(self.mcp, self)
         register_convention(self.mcp, self)
         register_semantic(self.mcp, self)
+        register_prompts(self.mcp, self)
 
     def start_infrastructure(self) -> None:
         self.index.build()

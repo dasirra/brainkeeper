@@ -1,6 +1,6 @@
 [project]
 name = "brainkeeper"
-version = "0.2.0"
+version = "0.2.1"
 description = "Structured Markdown vault standard with a Python vault engine and MCP interface"
 readme = "README.md"
 license = { text = "MIT" }
