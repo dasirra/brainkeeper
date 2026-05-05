@@ -9,6 +9,11 @@ Two artifacts are versioned independently:
 - **`spec-vX.Y.Z`**: the brainkeeper specification (`spec/`).
 - **`brainkeeper-vX.Y.Z`**: the `brainkeeper` Python package, which contains the vault engine library, the MCP server, and the CLI.
 
+## [brainkeeper-v0.2.2] - 2026-05-05
+
+### Fixed
+- `triage_inbox` prompt failed with a Pydantic `int_parsing` error when invoked from MCP clients (notably Claude Code's slash-command UI) that send empty strings for unfilled positional arguments. Prompt arguments are now typed as `str | None` and coerced internally; empty strings are treated as "use default". Boolean variants (`true`/`false`/`yes`/`no`/`1`/`0`/`on`/`off`, case-insensitive) all coerce correctly for `dry_run`.
+
 ## [brainkeeper-v0.2.1] - 2026-05-05
 
 ### Added
@@ -131,6 +136,7 @@ First public release of the `brainkeeper` Python package. Implements spec v0.1.4
 - Archive semantics narrowed to completed projects only; retired Areas are deleted or distilled into Brain, not archived.
 - Domain tags: cardinality relaxed to 0..n (optional but recommended); vocabulary derived from folders under `projects/` and `areas/` rather than an enumerated list in the config.
 
+[brainkeeper-v0.2.2]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.2
 [brainkeeper-v0.2.1]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.1
 [spec-v0.2.0]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.2.0
 [brainkeeper-v0.2.0]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.0
