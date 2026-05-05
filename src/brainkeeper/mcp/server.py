@@ -43,11 +43,12 @@ the spec contract and bypassing it produces non-compliant data.
 
 ## Recommended workflow
 
-- **Capture a new note**: `resolve_path(intent)` → optional
-  `get_template(name)` → `write_note_atomic(path, content, frontmatter)`.
-  The tool auto-fills `created` (today on new file, on-disk value
-  preserved on overwrite) and `updated` (always today). Do not compute
-  these yourself.
+- **Capture a new note**: pick a target path inside the appropriate
+  layer (use `list_layers` if uncertain), optionally call
+  `get_template(name)` for the layer's template, then
+  `write_note_atomic(path, content, frontmatter)`. The tool auto-fills
+  `created` (today on new file, on-disk value preserved on overwrite)
+  and `updated` (always today). Do not compute these yourself.
 - **Read content**: `read_note(path)`. Returns parsed frontmatter,
   content, mtime.
 - **Find by tag**: `find_by_tag(tag, prefix_match=True)`. Default is
@@ -59,7 +60,8 @@ the spec contract and bypassing it produces non-compliant data.
 
 ## Defaults & limitations
 
-- Captures with no routing match go to `inbox`.
+- When the appropriate destination is not obvious, write to the `inbox`
+  layer and triage later.
 - `delete_note(soft=True)` archives to `<archive>/<YYYY>/`.
 - `move_note` does NOT rewrite wikilinks (v1).
 - Unknown template variables `{{var}}` are left untouched on

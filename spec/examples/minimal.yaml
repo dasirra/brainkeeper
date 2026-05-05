@@ -1,6 +1,5 @@
 # Smallest valid brainkeeper config.
 # All 6 layer keys are required (string shorthand allowed).
-# capture_routing must include a `default`.
 
 layers:
   inbox:    "00 Inbox"
@@ -9,6 +8,3 @@ layers:
   areas:    "30 Areas"
   brain:    "40 Brain"
   archive:  "90 Archive"
-
-capture_routing:
-  default: "00 Inbox/"

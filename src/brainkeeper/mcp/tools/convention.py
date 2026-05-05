@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -69,18 +68,3 @@ def register_convention(mcp: "FastMCP", srv: "BrainkeeperServer") -> None:
             "content": content,
             "variables": variables,
         }
-
-    @mcp.tool()
-    def resolve_path(
-        intent: str, params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
-        """Resolve a capture intent to a target path + mode + optional anchor."""
-        params = params or {}
-        routing = srv.config.capture_routing
-        target = routing.get(intent, routing["default"])
-        target = target.replace("{today}", date.today().isoformat())
-        anchor = None
-        if "#" in target:
-            target, anchor = target.split("#", 1)
-        mode = "create" if target.endswith("/") else "append"
-        return {"path": target, "mode": mode, "anchor": anchor}

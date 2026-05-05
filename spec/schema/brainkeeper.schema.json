@@ -4,7 +4,7 @@
   "title": "brainkeeper vault config",
   "description": "Configuration file format for a brainkeeper-compliant Second Brain vault.",
   "type": "object",
-  "required": ["layers", "capture_routing"],
+  "required": ["layers"],
   "additionalProperties": false,
   "properties": {
     "layers": {
@@ -21,15 +21,6 @@
         "areas":    { "$ref": "#/$defs/layerEntry" },
         "brain":    { "$ref": "#/$defs/layerEntry" },
         "archive":  { "$ref": "#/$defs/layerEntry" }
-      }
-    },
-    "capture_routing": {
-      "type": "object",
-      "description": "Maps capture intent keys (idea, todo, meeting, ...) to a destination path. `default` is required.",
-      "required": ["default"],
-      "additionalProperties": { "$ref": "#/$defs/routeTarget" },
-      "properties": {
-        "default": { "$ref": "#/$defs/routeTarget" }
       }
     }
   },
@@ -55,12 +46,6 @@
           }
         }
       ]
-    },
-    "routeTarget": {
-      "type": "string",
-      "description": "Destination for a captured entry. Trailing '/' indicates a folder (new file per capture). A bare path means append to that file. May include '#Anchor' to target a heading. Supports `{today}` substitution.",
-      "minLength": 1,
-      "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+"
     }
   }
 }

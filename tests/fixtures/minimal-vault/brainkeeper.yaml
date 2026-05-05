@@ -9,6 +9,3 @@ layers:
   archive:
     path: "90 Archive"
     year_subfolder: true
-
-capture_routing:
-  default: "00 Inbox/"
