@@ -78,6 +78,38 @@ After the main table, list any notes that were set aside:
 """
 
 
+def _coerce_optional_int(value: str | int | None) -> int | None:
+    """Coerce a prompt arg to optional int. Treats None and empty string as None.
+
+    MCP transmits prompt args as strings; some clients send `""` for unfilled
+    positionals, which Pydantic cannot coerce to `int | None` directly.
+    """
+    if value is None or (isinstance(value, str) and value.strip() == ""):
+        return None
+    return int(value)
+
+
+def _coerce_int(value: str | int | None, default: int) -> int:
+    if value is None or (isinstance(value, str) and value.strip() == ""):
+        return default
+    return int(value)
+
+
+def _coerce_bool(value: str | bool | None, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    s = value.strip().lower()
+    if s == "":
+        return default
+    if s in ("true", "1", "yes", "y", "on"):
+        return True
+    if s in ("false", "0", "no", "n", "off"):
+        return False
+    raise ValueError(f"cannot coerce {value!r} to bool")
+
+
 def register_prompts(mcp: "FastMCP", _srv: "BrainkeeperServer") -> None:
     # `_srv` is unused: v1 prompts are static workflows that do not read live
     # vault state at render time. Kept in the signature for parity with the
@@ -85,9 +117,12 @@ def register_prompts(mcp: "FastMCP", _srv: "BrainkeeperServer") -> None:
 
     @mcp.prompt()
     def triage_inbox(
-        older_than_days: int | None = None,
-        limit: int = 20,
-        dry_run: bool = True,
+        older_than_days: str | None = None,
+        limit: str | None = None,
+        dry_run: str | None = None,
     ) -> str:
-        """Walk the inbox layer and propose a destination for each managed note. The prompt returns a workflow the agent follows using existing tools (`list_layers`, `list_notes`, `read_note`, `validate_frontmatter`, `move_note`, `delete_note`); it does not embed live inbox state. `older_than_days` filters to notes at least N days old. `limit` caps the per-invocation count (default 20). `dry_run=true` (default) forbids `move_note`/`delete_note`; re-invoke with `dry_run=false` to apply after user confirmation."""
-        return _build_triage_inbox_body(older_than_days, limit, dry_run)
+        """Walk the inbox layer and propose a destination for each managed note. The prompt returns a workflow the agent follows using existing tools (`list_layers`, `list_notes`, `read_note`, `validate_frontmatter`, `move_note`, `delete_note`); it does not embed live inbox state. `older_than_days` filters to notes at least N days old (omit to disable). `limit` caps the per-invocation count (default 20). `dry_run=true` (default) forbids `move_note`/`delete_note`; pass `false` to apply after user confirmation. Args are accepted as strings to play well with MCP clients that send empty positionals."""
+        days = _coerce_optional_int(older_than_days)
+        n = _coerce_int(limit, 20)
+        apply_dry_run = _coerce_bool(dry_run, True)
+        return _build_triage_inbox_body(days, n, apply_dry_run)
