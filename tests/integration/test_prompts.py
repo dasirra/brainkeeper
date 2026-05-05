@@ -59,7 +59,7 @@ async def test_triage_inbox_does_not_reference_nonexistent_tool_args(srv):
 
 
 async def test_triage_inbox_apply_mode(srv):
-    body = await _render(srv, "triage_inbox", dry_run=False)
+    body = await _render(srv, "triage_inbox", dry_run="false")
     # Apply path activates explicit confirmation language.
     assert "ask the user to confirm" in body
     assert "move_note(src, dst)" in body
@@ -69,12 +69,12 @@ async def test_triage_inbox_apply_mode(srv):
 
 
 async def test_triage_inbox_age_filter(srv):
-    body = await _render(srv, "triage_inbox", older_than_days=7)
+    body = await _render(srv, "triage_inbox", older_than_days="7")
     assert "at least 7 days old" in body
 
 
 async def test_triage_inbox_limit_propagates(srv):
-    body = await _render(srv, "triage_inbox", limit=5)
+    body = await _render(srv, "triage_inbox", limit="5")
     assert "first 5 notes" in body
     assert "first 20 notes" not in body
 
@@ -85,9 +85,8 @@ async def test_triage_inbox_no_new_folders_constraint(srv):
 
 
 async def test_triage_inbox_string_arg_coercion(srv):
-    """MCP transmits prompt args as strings over the wire. FastMCP coerces
-    them via Pydantic. Verify dry_run="false" produces the apply-mode body
-    and limit="5" / older_than_days="7" coerce to integers correctly.
+    """MCP transmits prompt args as strings over the wire. Verify the
+    coercion helpers handle the string forms correctly.
     """
     body = await _render(
         srv,
@@ -99,3 +98,36 @@ async def test_triage_inbox_string_arg_coercion(srv):
     assert "ask the user to confirm" in body
     assert "first 5 notes" in body
     assert "at least 7 days old" in body
+
+
+async def test_triage_inbox_empty_string_args_use_defaults(srv):
+    """Regression: some MCP clients send empty strings for unfilled positional
+    args. Empty strings must be treated as "use default" rather than failing
+    Pydantic int coercion.
+    """
+    body = await _render(
+        srv,
+        "triage_inbox",
+        older_than_days="",
+        limit="",
+        dry_run="",
+    )
+    # Defaults applied: no age filter, limit=20, dry_run=true.
+    # The age-filter sub-bullet is the only line with "days old"; absent here.
+    assert "days old" not in body
+    assert "first 20 notes" in body
+    assert "Do NOT call `move_note`" in body  # dry_run default is true
+
+
+async def test_triage_inbox_bool_coercion_variants(srv):
+    """Verify common boolean-string variants for dry_run."""
+    for false_value in ("false", "False", "0", "no", "off"):
+        body = await _render(srv, "triage_inbox", dry_run=false_value)
+        assert "ask the user to confirm" in body, (
+            f"dry_run={false_value!r} should disable dry-run mode"
+        )
+    for true_value in ("true", "True", "1", "yes", "on"):
+        body = await _render(srv, "triage_inbox", dry_run=true_value)
+        assert "Do NOT call `move_note`" in body, (
+            f"dry_run={true_value!r} should keep dry-run mode"
+        )
