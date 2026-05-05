@@ -1,4 +1,3 @@
-from datetime import date
 from pathlib import Path
 
 import pytest
@@ -28,7 +27,7 @@ def test_read_convention(srv):
     out = _call(srv, "read_convention")
     assert "layers" in out
     assert out["layers"]["inbox"] == "00 Inbox"
-    assert "capture_routing" in out
+    assert "capture_routing" not in out
 
 
 def test_list_layers(srv):
@@ -63,29 +62,8 @@ def test_get_template_missing(srv):
         _call(srv, "get_template", name="Nonexistent")
 
 
-def test_resolve_path_with_intent(srv, minimal_vault):
-    srv.config.capture_routing["idea"] = "30 Areas/Ideas/Inbox.md"
-    out = _call(srv, "resolve_path", intent="idea")
-    assert out["path"] == "30 Areas/Ideas/Inbox.md"
-    assert out["mode"] == "append"
-    assert out["anchor"] is None
-
-
-def test_resolve_path_fallback_to_default(srv):
-    out = _call(srv, "resolve_path", intent="unknown")
-    assert out["path"] == "00 Inbox/"
-    assert out["mode"] == "create"
-
-
-def test_resolve_path_anchor(srv):
-    srv.config.capture_routing["meeting"] = "10 Journal/{today}.md#Meetings"
-    out = _call(srv, "resolve_path", intent="meeting")
-    assert out["anchor"] == "Meetings"
-    assert out["mode"] == "append"
-    assert date.today().isoformat() in out["path"]
-
-
-def test_resolve_path_today_substitution(srv):
-    srv.config.capture_routing["daily"] = "10 Journal/{today}.md"
-    out = _call(srv, "resolve_path", intent="daily")
-    assert out["path"].endswith(f"{date.today().isoformat()}.md")
+def test_resolve_path_tool_removed(srv):
+    """resolve_path was removed in v0.2.0; verify it's not registered."""
+    components = srv.mcp._local_provider._components
+    tool_names = {t.name for k, t in components.items() if k.startswith("tool:")}
+    assert "resolve_path" not in tool_names

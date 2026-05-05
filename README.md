@@ -61,7 +61,7 @@ If you don't already have a brainkeeper vault, create one:
 uvx brainkeeper init ~/MyVault
 ```
 
-This creates the six layer directories and drops a `brainkeeper.yaml` (the minimal reference config) at the vault root. Open the YAML to adjust folder names, capture routes, and area substructure to taste. Validate against the schema at any time:
+This creates the six layer directories and drops a `brainkeeper.yaml` (the minimal reference config) at the vault root. Open the YAML to adjust folder names and area substructure to taste. Validate against the schema at any time:
 
 ```bash
 uvx check-jsonschema \
@@ -139,7 +139,6 @@ The server registers thirteen tools across three layers. All vault access goes t
 | `read_convention` | Return the parsed `brainkeeper.yaml`. |
 | `list_layers` | Resolve the six canonical layer keys to their on-disk folder names. |
 | `get_template` | Fetch a per-layer template from `<layer>/_templates/`. |
-| `resolve_path` | Map a capture intent to a target path according to the config's routing rules. |
 
 **Semantic** (spec-level queries):
 

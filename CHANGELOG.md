@@ -9,6 +9,32 @@ Two artifacts are versioned independently:
 - **`spec-vX.Y.Z`**: the brainkeeper specification (`spec/`).
 - **`brainkeeper-vX.Y.Z`**: the `brainkeeper` Python package, which contains the vault engine library, the MCP server, and the CLI.
 
+## [brainkeeper-v0.2.0] - 2026-05-05
+
+Capture-intent mechanism removed. The MCP no longer prescribes how callers choose where a captured note lands; the agent picks the target path directly.
+
+### Changed
+- **Breaking:** `resolve_path` MCP tool removed. Callers determine target paths using `list_layers`, `read_convention`, and the tag/folder conventions in the spec, then write through `write_note_atomic` directly.
+- Tool count drops from 14 to 13. The convention layer now exposes three tools: `read_convention`, `list_layers`, `get_template`.
+- `Config.capture_routing` field removed from the `core` library API. Code that read `srv.config.capture_routing` must be updated.
+- Server `instructions=` block updated: the "capture a new note" workflow no longer references `resolve_path`, and the routing-fallback note is gone.
+
+### Migration
+- Update `brainkeeper.yaml`: delete the `capture_routing:` block. Configs that still contain it now fail schema validation (the schema's root-level `additionalProperties: false` rejects unknown keys).
+- Any agent or library code calling `resolve_path` must be rewritten to choose paths directly. A reasonable default: write to the configured `inbox` layer when the destination is unclear, then triage later.
+
+## [spec-v0.2.0] - 2026-05-05
+
+### Changed
+- **Breaking:** `capture_routing` block removed from `brainkeeper.yaml`. The schema's `routeTarget` `$def` is gone; the root `required` array is now `["layers"]` only.
+- §11 Classification rules: the prescriptive intent-lookup procedure is removed. The spec no longer mandates how a tool chooses a target path; that decision is up to the caller.
+- §14 Config file format: the `capture_routing` example and the "Capture routes." paragraph (route syntax, `#Anchor`, `{today}` substitution) are removed.
+- §15 Extension points: the "adding a new capture route" bullet is removed.
+
+### Migration
+- Delete the `capture_routing:` block from your `brainkeeper.yaml`. The schema rejects it as an unknown root-level key.
+- Tooling that resolved capture intents through `capture_routing` must be rewritten. There is no replacement: pick the destination directly using the layer map, tags, and naming conventions.
+
 ## [brainkeeper-v0.1.1] - 2026-05-03
 
 Docs, branding, and CI/CD polish. No public API or behavioral changes since v0.1.0.
@@ -99,6 +125,8 @@ First public release of the `brainkeeper` Python package. Implements spec v0.1.4
 - Archive semantics narrowed to completed projects only; retired Areas are deleted or distilled into Brain, not archived.
 - Domain tags: cardinality relaxed to 0..n (optional but recommended); vocabulary derived from folders under `projects/` and `areas/` rather than an enumerated list in the config.
 
+[spec-v0.2.0]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.2.0
+[brainkeeper-v0.2.0]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.0
 [spec-v0.1.4]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.1.4
 [spec-v0.1.3]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.1.3
 [spec-v0.1.2]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.1.2

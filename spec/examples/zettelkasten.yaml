@@ -12,7 +12,3 @@ layers:
   archive:
     path: "Archive"
     year_subfolder: true
-
-capture_routing:
-  idea:    "Fleeting/Ideas.md"
-  default: "Fleeting/"

@@ -73,7 +73,6 @@ class Layers(BaseModel):
 
 class Config(BaseModel):
     layers: Layers
-    capture_routing: dict[str, str]
     vault_root: Path = Field(exclude=True)
 
     def layer_path(self, key: str) -> Path:
@@ -99,6 +98,5 @@ class ConfigLoader:
             raise ValueError(f"brainkeeper.yaml fails schema: {msg}")
         return Config(
             layers=Layers.from_raw(raw["layers"]),
-            capture_routing=raw["capture_routing"],
             vault_root=self.vault_root,
         )

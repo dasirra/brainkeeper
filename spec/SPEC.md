@@ -1,15 +1,15 @@
 # brainkeeper specification
 
-**Version:** 0.1.4
+**Version:** 0.2.0
 **Status:** Draft
-**Date:** 2026-05-02
+**Date:** 2026-05-05
 **License:** MIT
 
 ## Abstract
 
 brainkeeper is a standard for structured Markdown-based Second Brain vaults. It formalizes a PARA-inspired layer model, extended with a dated journal and a narrow archive for completed projects, and defines the content conventions (frontmatter, tags, naming, links, templates) and lifecycle rules (classification, transitions) that make a vault machine-readable without losing the flexibility that makes personal knowledge systems useful.
 
-The spec is tool-agnostic: any editor that writes Markdown with YAML frontmatter to a local directory can produce a brainkeeper-compliant vault. A companion `brainkeeper.yaml` config file at the vault root specifies per-vault choices (folder names, capture routes) and is validated against `brainkeeper.schema.json`.
+The spec is tool-agnostic: any editor that writes Markdown with YAML frontmatter to a local directory can produce a brainkeeper-compliant vault. A companion `brainkeeper.yaml` config file at the vault root specifies per-vault choices (folder names, layer options) and is validated against `brainkeeper.schema.json`.
 
 ## How to read this spec
 
@@ -105,7 +105,7 @@ layers:
 
 and the vault remains compliant. Tooling MUST reference layers by their canonical key (`layers.projects`) and never by a literal path string.
 
-This rule applies to all spec-reserved concepts: template file names (§10) and capture routes (§14) are user-configurable strings mapped through the config file.
+This rule applies to all spec-reserved concepts: template file names (§10) are user-configurable strings mapped through the config file.
 
 
 ## Part II: Content model
@@ -214,11 +214,7 @@ Unknown variables MUST be left untouched by substituting tools (no silent deleti
 
 ### 11. Classification rules
 
-A new note with no obvious destination SHOULD be written to the `inbox` layer. Triage moves the note to its final layer. Tools offering a `capture` operation SHOULD:
-
-1. Receive a capture *intent* (e.g. `idea`, `meeting`, `todo`) from the caller, or infer one from content.
-2. Look up `capture_routing.<intent>` in the config.
-3. Fall back to `capture_routing.default` if no route matches.
+A new note with no obvious destination SHOULD be written to the `inbox` layer. Triage moves the note to its final layer. The spec does not prescribe a routing mechanism: callers are responsible for choosing a target path inside the vault, using the layer map (§1), the tag taxonomy (§7), and the naming conventions (§8) as guidance.
 
 ### 12. Transition rules
 
@@ -261,19 +257,11 @@ layers:
   archive:
     path: "90 Archive"
     year_subfolder: true
-
-capture_routing:
-  idea:    "30 Areas/Ideas/Inbox.md"
-  todo:    "00 Inbox/Todos.md"
-  meeting: "10 Journal/{today}.md#Meetings"
-  default: "00 Inbox/"
 ```
 
 **Shorthand vs object form for layers.** Each layer entry accepts either a string (shorthand: path only) or an object (when the layer needs additional options: `format`, `year_subfolder`). The schema defines which options apply to which layers.
 
 **Path rules.** Paths under `layers.*` are vault-relative. Leading `/` is invalid. `..` segments are invalid.
-
-**Capture routes.** A route value ending in `/` denotes a folder (new file per capture). A bare path denotes append-to-file. A `#Anchor` suffix targets a heading inside that file. The token `{today}` is substituted with the current date (`YYYY-MM-DD`).
 
 **Minimum viable config.** See [`examples/minimal.yaml`](./examples/minimal.yaml).
 
@@ -281,7 +269,6 @@ capture_routing:
 
 The following additions do NOT require a change to the spec or the schema. They are expressible in config alone:
 
-- Adding a new capture route: add a key under `capture_routing:`.
 - Adding a new template: drop a `.md` file into `<layer>/_templates/` inside the relevant layer.
 - Renaming any folder: change the corresponding path under `layers:`.
 

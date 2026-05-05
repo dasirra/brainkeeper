@@ -12,9 +12,3 @@ layers:
   archive:
     path: "90 Archive"
     year_subfolder: true
-
-capture_routing:
-  idea:    "30 Areas/Ideas/Inbox.md"
-  todo:    "00 Inbox/Todos.md"
-  meeting: "10 Journal/{today}.md#Meetings"
-  default: "00 Inbox/"
