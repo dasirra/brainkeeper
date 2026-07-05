@@ -36,3 +36,10 @@ def test_serve_missing_vault_exits_1(tmp_path: Path, monkeypatch, capsys):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     assert main(["serve"]) == 1
     assert "brainkeeper init" in capsys.readouterr().err
+
+
+def test_init_blocked_by_file_exits_1(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    (tmp_path / ".brainkeeper").write_text("not a directory\n")
+    assert main(["init"]) == 1
+    assert "error" in capsys.readouterr().err

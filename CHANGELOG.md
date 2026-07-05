@@ -19,7 +19,7 @@ The vault location is now fixed at `~/.brainkeeper/vault`, deliberately not conf
 - New `brainkeeper.cli.vault_path()` helper: the single source of truth for the fixed vault location.
 
 ### Migration
-- Move any existing vault into place: `mv ~/MyVault ~/.brainkeeper/vault`.
+- Move any existing vault into place instead of running `init` (the target must not exist yet): `mkdir -p ~/.brainkeeper && mv ~/MyVault ~/.brainkeeper/vault`.
 - Remove `--vault` from every MCP client entry that references `brainkeeper serve`. The command is now just `uvx brainkeeper serve`.
 
 ## [brainkeeper-v0.2.2] - 2026-05-05

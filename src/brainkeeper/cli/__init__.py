@@ -11,7 +11,8 @@ from . import init as _init
 
 def vault_path() -> Path:
     """Fixed vault location: the single source of truth."""
-    return Path.home() / ".brainkeeper" / "vault"
+    # resolve() keeps the watcher/index path keys canonical under symlinked homes
+    return (Path.home() / ".brainkeeper" / "vault").resolve()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -27,15 +28,15 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("init", help="Bootstrap the vault at ~/.brainkeeper/vault")
 
     args = parser.parse_args(argv)
-    args.vault = vault_path()
 
+    if args.command is None:
+        parser.print_help()
+        return 0
+
+    args.vault = vault_path()
     if args.command == "serve":
         return _serve.run(args)
-    if args.command == "init":
-        return _init.run(args)
-
-    parser.print_help()
-    return 0
+    return _init.run(args)
 
 
 if __name__ == "__main__":

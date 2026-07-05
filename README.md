@@ -69,9 +69,10 @@ uvx check-jsonschema \
   ~/.brainkeeper/vault/brainkeeper.yaml
 ```
 
-Already have a vault elsewhere? Move it into place instead of creating a new one:
+Already have a vault elsewhere? Move it into place instead of running `init` (the target must not exist yet):
 
 ```bash
+mkdir -p ~/.brainkeeper
 mv ~/MyVault ~/.brainkeeper/vault
 ```
 
