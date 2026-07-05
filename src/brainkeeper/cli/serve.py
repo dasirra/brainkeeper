@@ -13,9 +13,12 @@ def run(args) -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         stream=sys.stderr,
     )
-    vault = args.vault.expanduser().resolve()
+    vault = args.vault
     if not vault.is_dir():
-        print(f"error: vault path is not a directory: {vault}", file=sys.stderr)
+        print(
+            f"error: no vault at {vault}. Run `brainkeeper init` to create it.",
+            file=sys.stderr,
+        )
         return 1
     srv = BrainkeeperServer(vault)
     srv.run_stdio()
