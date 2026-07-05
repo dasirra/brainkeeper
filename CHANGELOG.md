@@ -9,6 +9,19 @@ Two artifacts are versioned independently:
 - **`spec-vX.Y.Z`**: the brainkeeper specification (`spec/`).
 - **`brainkeeper-vX.Y.Z`**: the `brainkeeper` Python package, which contains the vault engine library, the MCP server, and the CLI.
 
+## [brainkeeper-v0.3.0] - Unreleased
+
+The vault location is now fixed at `~/.brainkeeper/vault`, deliberately not configurable.
+
+### Changed
+- **Breaking:** `serve` loses `--vault`. The server always serves `~/.brainkeeper/vault`; if it doesn't exist, `serve` exits with an error pointing at `brainkeeper init`.
+- **Breaking:** `init` loses its `path` positional. It always scaffolds `~/.brainkeeper/vault`.
+- New `brainkeeper.cli.vault_path()` helper: the single source of truth for the fixed vault location.
+
+### Migration
+- Move any existing vault into place: `mv ~/MyVault ~/.brainkeeper/vault`.
+- Remove `--vault` from every MCP client entry that references `brainkeeper serve`. The command is now just `uvx brainkeeper serve`.
+
 ## [brainkeeper-v0.2.2] - 2026-05-05
 
 ### Fixed
@@ -136,6 +149,7 @@ First public release of the `brainkeeper` Python package. Implements spec v0.1.4
 - Archive semantics narrowed to completed projects only; retired Areas are deleted or distilled into Brain, not archived.
 - Domain tags: cardinality relaxed to 0..n (optional but recommended); vocabulary derived from folders under `projects/` and `areas/` rather than an enumerated list in the config.
 
+[brainkeeper-v0.3.0]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.3.0
 [brainkeeper-v0.2.2]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.2
 [brainkeeper-v0.2.1]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.1
 [spec-v0.2.0]: https://github.com/dasirra/brainkeeper/releases/tag/spec-v0.2.0

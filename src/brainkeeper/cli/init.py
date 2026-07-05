@@ -31,7 +31,7 @@ def _find_minimal_yaml() -> Path:
 
 
 def run(args) -> int:
-    vault = args.path.expanduser().resolve()
+    vault = args.vault
     vault.mkdir(parents=True, exist_ok=True)
 
     for layer in _LAYER_DIRS:
