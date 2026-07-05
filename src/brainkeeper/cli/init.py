@@ -31,11 +31,18 @@ def _find_minimal_yaml() -> Path:
 
 
 def run(args) -> int:
-    vault = args.path.expanduser().resolve()
-    vault.mkdir(parents=True, exist_ok=True)
-
-    for layer in _LAYER_DIRS:
-        (vault / layer).mkdir(exist_ok=True)
+    vault = args.vault
+    try:
+        vault.mkdir(parents=True, exist_ok=True)
+        for layer in _LAYER_DIRS:
+            (vault / layer).mkdir(exist_ok=True)
+    except (FileExistsError, NotADirectoryError):
+        print(
+            f"error: cannot create {vault}: a file is in the way. "
+            "Remove it and re-run `brainkeeper init`.",
+            file=sys.stderr,
+        )
+        return 1
 
     config_path = vault / "brainkeeper.yaml"
     if config_path.exists():

@@ -58,15 +58,22 @@ Either way, you need Python 3.11 or newer.
 If you don't already have a brainkeeper vault, create one:
 
 ```bash
-uvx brainkeeper init ~/MyVault
+uvx brainkeeper init
 ```
 
-This creates the six layer directories and drops a `brainkeeper.yaml` (the minimal reference config) at the vault root. Open the YAML to adjust folder names and area substructure to taste. Validate against the schema at any time:
+This scaffolds the vault at `~/.brainkeeper/vault`: the six layer directories plus a `brainkeeper.yaml` (the minimal reference config) at the vault root. Open the YAML to adjust folder names and area substructure to taste. Validate against the schema at any time:
 
 ```bash
 uvx check-jsonschema \
   --schemafile https://raw.githubusercontent.com/dasirra/brainkeeper/main/spec/schema/brainkeeper.schema.json \
-  ~/MyVault/brainkeeper.yaml
+  ~/.brainkeeper/vault/brainkeeper.yaml
+```
+
+Already have a vault elsewhere? Move it into place instead of running `init` (the target must not exist yet):
+
+```bash
+mkdir -p ~/.brainkeeper
+mv ~/MyVault ~/.brainkeeper/vault
 ```
 
 ### 3. Configure your MCP client
@@ -76,7 +83,7 @@ The MCP server is launched by your LLM harness over stdio. Pick the snippet for 
 **Claude Code** (one command):
 
 ```bash
-claude mcp add --scope user brainkeeper -- uvx brainkeeper serve --vault ~/MyVault
+claude mcp add --scope user brainkeeper -- uvx brainkeeper serve
 ```
 
 **Claude Desktop**: edit the config file at
@@ -91,15 +98,15 @@ and add:
   "mcpServers": {
     "brainkeeper": {
       "command": "uvx",
-      "args": ["brainkeeper", "serve", "--vault", "/Users/you/MyVault"]
+      "args": ["brainkeeper", "serve"]
     }
   }
 }
 ```
 
-Then restart Claude Desktop. Use an absolute path; `~` is not expanded inside this JSON.
+Then restart Claude Desktop.
 
-**Other clients**: any MCP-capable harness that speaks stdio works. The command is `uvx brainkeeper serve --vault /absolute/path/to/vault` (or `brainkeeper serve --vault ...` if you `pip install`ed).
+**Other clients**: any MCP-capable harness that speaks stdio works. The command is `uvx brainkeeper serve` (or `brainkeeper serve` if you `pip install`ed).
 
 ### 4. Verify
 
@@ -170,7 +177,7 @@ The current spec version is **v0.1.4**. See [`CHANGELOG.md`](https://github.com/
 
 This is the first public release. Known constraints:
 
-- **One vault per server instance.** Each MCP process serves a single `--vault`. Multi-vault setups need multiple server entries in your client config.
+- **One vault per server instance.** The server always serves the fixed vault at `~/.brainkeeper/vault`. Multiple vaults are not supported.
 - **`move_note` does not rewrite wikilinks.** Inbound links to a moved note become stale until you fix them manually. Planned for a later release.
 - **No always-on indexing.** The MCP runs only while its host (Claude Code, Claude Desktop, etc.) is running. There is no background daemon.
 - **The MCP encodes the spec contract.** If you let an LLM use raw filesystem tools (Read, Write, Edit) on the vault path, it will produce notes that violate the frontmatter contract or land in the wrong layer. Tell your agent to use only the brainkeeper tools when working inside the vault.

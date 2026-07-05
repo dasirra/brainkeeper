@@ -9,6 +9,12 @@ from . import serve as _serve
 from . import init as _init
 
 
+def vault_path() -> Path:
+    """Fixed vault location: the single source of truth."""
+    # resolve() keeps the watcher/index path keys canonical under symlinked homes
+    return (Path.home() / ".brainkeeper" / "vault").resolve()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="brainkeeper",
@@ -17,28 +23,20 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     sp_serve = sub.add_parser("serve", help="Start the MCP server")
-    sp_serve.add_argument(
-        "--vault",
-        type=Path,
-        required=True,
-        help="Path to vault root containing brainkeeper.yaml",
-    )
     sp_serve.add_argument("-v", "--verbose", action="store_true")
 
-    sp_init = sub.add_parser("init", help="Bootstrap a new vault")
-    sp_init.add_argument(
-        "path", type=Path, help="Path for the new vault root (created if absent)"
-    )
+    sub.add_parser("init", help="Bootstrap the vault at ~/.brainkeeper/vault")
 
     args = parser.parse_args(argv)
 
+    if args.command is None:
+        parser.print_help()
+        return 0
+
+    args.vault = vault_path()
     if args.command == "serve":
         return _serve.run(args)
-    if args.command == "init":
-        return _init.run(args)
-
-    parser.print_help()
-    return 0
+    return _init.run(args)
 
 
 if __name__ == "__main__":
