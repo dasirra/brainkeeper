@@ -20,3 +20,19 @@ def minimal_vault(tmp_path: Path) -> Path:
     for kp in dst.rglob(".gitkeep"):
         kp.unlink()
     return dst
+
+
+def write_note(
+    path: Path,
+    created: str,
+    updated: str | None = None,
+    tags: list[str] | None = None,
+) -> None:
+    """Write a minimal frontmatter'd note at `path` for stats fixtures."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tags = tags if tags is not None else ["x"]
+    updated = updated or created
+    tags_yaml = "[" + ", ".join(tags) + "]"
+    path.write_text(
+        f"---\ncreated: {created}\nupdated: {updated}\ntags: {tags_yaml}\n---\nbody\n"
+    )

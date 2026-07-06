@@ -8,13 +8,12 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
+from ...core.stats import LAYER_KEYS as CANONICAL_KEYS
+
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
     from ..server import BrainkeeperServer
-
-
-CANONICAL_KEYS = ("inbox", "journal", "projects", "areas", "brain", "archive")
 
 _VAR_RE = re.compile(r"\{\{[^}]+\}\}")
 
