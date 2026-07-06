@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 from freezegun import freeze_time
 
-from brainkeeper.core.stats import compute_stats
+from brainkeeper.core.stats import INBOX_ROT_DAYS, compute_stats
+from conftest import write_note as _write
 
 TODAY = date(2025, 6, 15)
 
@@ -22,21 +23,6 @@ def _frozen_today():
 def _d(delta: int) -> str:
     """ISO date string `delta` days from the frozen today (negative = past)."""
     return (TODAY + timedelta(days=delta)).isoformat()
-
-
-def _write(
-    path: Path,
-    created: str,
-    updated: str | None = None,
-    tags: list[str] | None = None,
-) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tags = tags if tags is not None else ["x"]
-    updated = updated or created
-    tags_yaml = "[" + ", ".join(tags) + "]"
-    path.write_text(
-        f"---\ncreated: {created}\nupdated: {updated}\ntags: {tags_yaml}\n---\nbody\n"
-    )
 
 
 # --- C03/C08: totals + per-layer breakdown -----------------------------------
@@ -129,6 +115,22 @@ def test_top_tags_capped_at_five(minimal_vault: Path):
         ("d", 2),
         ("e", 2),
     ]
+
+
+def test_tags_normalized_and_deduped_per_note(minimal_vault: Path):
+    """A repeated tag counts once per note; a leading '#' is stripped."""
+    brain = minimal_vault / "40 Brain"
+    n0 = brain / "n0.md"
+    n0.parent.mkdir(parents=True, exist_ok=True)
+    n0.write_text(
+        f"---\ncreated: {_d(0)}\nupdated: {_d(0)}\n"
+        'tags: ["mcp", "mcp", "#mcp"]\n---\nbody\n'
+    )
+    _write(brain / "n1.md", _d(0), tags=['"#mcp"'])
+
+    stats = compute_stats(minimal_vault)
+
+    assert stats.top_tags == [("mcp", 2)]
 
 
 # --- C11/C12: exclusions -----------------------------------------------------
@@ -224,7 +226,7 @@ def test_inbox_warn_threshold(minimal_vault: Path, age_days: int, expect_warn: b
 
     stats = compute_stats(minimal_vault)
 
-    assert stats.inbox_warn is expect_warn
+    assert (stats.inbox_oldest_age_days > INBOX_ROT_DAYS) is expect_warn
     assert stats.inbox_oldest_age_days == age_days
 
 
@@ -236,7 +238,7 @@ def test_inbox_oldest_age_is_numeric_max(minimal_vault: Path):
     stats = compute_stats(minimal_vault)
 
     assert stats.inbox_oldest_age_days == 15
-    assert stats.inbox_warn is True
+    assert stats.inbox_oldest_age_days > INBOX_ROT_DAYS
 
 
 def test_inbox_empty_has_no_age(minimal_vault: Path):
@@ -245,7 +247,16 @@ def test_inbox_empty_has_no_age(minimal_vault: Path):
     stats = compute_stats(minimal_vault)
 
     assert stats.inbox_oldest_age_days is None
-    assert stats.inbox_warn is False
+
+
+def test_inbox_future_dated_note_clamps_age_to_zero(minimal_vault: Path):
+    """A future `created` date must not produce a negative age."""
+    _write(minimal_vault / "00 Inbox" / "note.md", _d(5))
+
+    stats = compute_stats(minimal_vault)
+
+    assert stats.inbox_oldest_age_days == 0
+    assert stats.inbox_oldest_age_days <= INBOX_ROT_DAYS
 
 
 # --- C24-C27, E05: orphans and sync conflicts --------------------------------

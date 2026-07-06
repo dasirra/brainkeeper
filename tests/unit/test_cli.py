@@ -5,6 +5,7 @@ import pytest
 from freezegun import freeze_time
 
 from brainkeeper.cli import main
+from conftest import write_note as _write_note
 
 _LAYER_DIRS = [
     "00 Inbox",
@@ -23,21 +24,6 @@ def frozen_today():
     """Pin `date.today()` for tests whose fixtures are built from relative dates."""
     with freeze_time(_STATS_TODAY.isoformat()):
         yield _STATS_TODAY
-
-
-def _write_note(
-    path: Path,
-    created: str,
-    updated: str | None = None,
-    tags: list[str] | None = None,
-) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tags = tags if tags is not None else ["x"]
-    updated = updated or created
-    tags_yaml = "[" + ", ".join(tags) + "]"
-    path.write_text(
-        f"---\ncreated: {created}\nupdated: {updated}\ntags: {tags_yaml}\n---\nbody\n"
-    )
 
 
 def test_init_creates_layers_and_config(tmp_path: Path, monkeypatch):

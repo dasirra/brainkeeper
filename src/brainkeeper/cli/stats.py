@@ -66,12 +66,13 @@ def _progress_lines(stats: VaultStats) -> list[str]:
 
 
 def _health_lines(stats: VaultStats) -> list[str]:
-    if stats.inbox_oldest_age_days is None:
+    age = stats.inbox_oldest_age_days
+    if age is None:
         inbox = "OK (no inbox notes)"
-    elif stats.inbox_warn:
-        inbox = f"WARN oldest {stats.inbox_oldest_age_days}d (> {INBOX_ROT_DAYS}d)"
+    elif age > INBOX_ROT_DAYS:
+        inbox = f"WARN oldest {age}d (> {INBOX_ROT_DAYS}d)"
     else:
-        inbox = f"OK (oldest {stats.inbox_oldest_age_days}d)"
+        inbox = f"OK (oldest {age}d)"
 
     orphans = "OK" if stats.orphan_count == 0 else f"WARN {stats.orphan_count} found"
     conflicts = (

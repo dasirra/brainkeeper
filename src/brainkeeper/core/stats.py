@@ -36,7 +36,6 @@ class VaultStats:
     top_tags: list[tuple[str, int]]
     journal_streak: int
     inbox_oldest_age_days: int | None
-    inbox_warn: bool
     orphan_count: int
     conflict_count: int
 
@@ -53,13 +52,15 @@ def compute_stats(vault: Path) -> VaultStats:
     index = Index(vault)
     index.build()
 
-    all_paths = index.paths()
-    conflict_count = sum(1 for p in all_paths if _is_conflict(p))
-    real_notes: list[NoteMeta] = [
-        meta
-        for p in all_paths
-        if not _is_conflict(p) and (meta := index.get(p)) is not None
-    ]
+    conflict_count = 0
+    real_notes: list[NoteMeta] = []
+    for p in index.paths():
+        if _is_conflict(p):
+            conflict_count += 1
+            continue
+        meta = index.get(p)
+        if meta is not None:
+            real_notes.append(meta)
 
     layer_dirs = {key: config.layer_path(key) for key in LAYER_KEYS}
     today = date.today()
@@ -74,7 +75,8 @@ def compute_stats(vault: Path) -> VaultStats:
     for meta in real_notes:
         tags = meta.frontmatter.get("tags")
         if isinstance(tags, list):
-            tag_counts.update(t for t in tags if isinstance(t, str))
+            normalized_tags = {t.lstrip("#") for t in tags if isinstance(t, str)}
+            tag_counts.update(normalized_tags)
 
         layer = _layer_for(meta.path, layer_dirs)
         if layer is None:
@@ -83,7 +85,7 @@ def compute_stats(vault: Path) -> VaultStats:
 
         created = _parse_iso_date(meta.frontmatter.get("created"))
         if created is not None:
-            age = (today - created).days
+            age = max(0, (today - created).days)
             if age <= 7:
                 created_7d[layer] += 1
             if age <= 30:
@@ -107,7 +109,6 @@ def compute_stats(vault: Path) -> VaultStats:
         top_tags=top_tags,
         journal_streak=_compute_streak(journal_dates, today),
         inbox_oldest_age_days=inbox_oldest_age,
-        inbox_warn=inbox_oldest_age is not None and inbox_oldest_age > INBOX_ROT_DAYS,
         orphan_count=sum(1 for m in real_notes if m.validation_errors),
         conflict_count=conflict_count,
     )
