@@ -42,7 +42,9 @@
           "properties": {
             "path":           { "$ref": "#/$defs/relPath" },
             "format":         { "type": "string" },
-            "year_subfolder": { "type": "boolean" }
+            "year_subfolder": { "type": "boolean" },
+            "status_field":   { "type": "string" },
+            "statuses":       { "type": "array", "items": { "type": "string" } }
           }
         }
       ]

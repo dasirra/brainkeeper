@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import fnmatch
+import itertools
 import re
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
@@ -22,6 +24,7 @@ LAYER_KEYS: tuple[str, ...] = (
 )
 _CONFLICT_GLOB = "*.sync-conflict-*.md"
 INBOX_ROT_DAYS = 14
+DAILY_WINDOW_DAYS = 364
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -38,6 +41,14 @@ class VaultStats:
     inbox_oldest_age_days: int | None
     orphan_count: int
     conflict_count: int
+    all_tag_counts: dict[str, int]
+    daily_created: dict[str, int]
+    daily_updated: dict[str, int]
+    weekly_created: dict[str, int]
+    monthly_created: dict[str, int]
+    growth_by_layer: dict[str, list[tuple[str, int]]]
+    tag_cooccurrence: list[tuple[str, str, int]]
+    project_status: dict[str, int] | None
 
 
 def compute_stats(vault: Path) -> VaultStats:
@@ -45,8 +56,10 @@ def compute_stats(vault: Path) -> VaultStats:
 
     Sync-conflict files (`*.sync-conflict-*.md`) are counted separately and
     excluded from every other count, tag, and orphan check. Notes outside
-    the six canonical layers still count toward `total_notes` but not
-    toward any per-layer breakdown.
+    the six canonical layers still count toward `total_notes` and the
+    whole-vault series (`daily_created`, `daily_updated`, `weekly_created`,
+    `monthly_created`) but not toward any per-layer breakdown, so summing a
+    per-layer field will not necessarily match the vault-wide series.
     """
     config = ConfigLoader(vault).load()
     index = Index(vault)
@@ -65,25 +78,44 @@ def compute_stats(vault: Path) -> VaultStats:
     layer_dirs = {key: config.layer_path(key) for key in LAYER_KEYS}
     today = date.today()
 
+    project_opts = config.layers.projects
+    status_field = project_opts.status_field
+    statuses = project_opts.statuses
+    project_status_counts: Counter[str] = Counter()
+
     notes_per_layer = dict.fromkeys(LAYER_KEYS, 0)
     created_7d = dict.fromkeys(LAYER_KEYS, 0)
     created_30d = dict.fromkeys(LAYER_KEYS, 0)
     tag_counts: Counter[str] = Counter()
+    cooccurrence: Counter[tuple[str, str]] = Counter()
     journal_dates: set[date] = set()
     inbox_ages: list[int] = []
+    created_counts: Counter[date] = Counter()
+    updated_counts: Counter[date] = Counter()
+    layer_created_counts: dict[str, Counter[date]] = {k: Counter() for k in LAYER_KEYS}
 
     for meta in real_notes:
         tags = meta.frontmatter.get("tags")
+        normalized_tags: set[str] = set()
         if isinstance(tags, list):
             normalized_tags = {t.lstrip("#") for t in tags if isinstance(t, str)}
             tag_counts.update(normalized_tags)
+        if len(normalized_tags) >= 2:
+            for a, b in itertools.combinations(sorted(normalized_tags), 2):
+                cooccurrence[(a, b)] += 1
+
+        created = _parse_iso_date(meta.frontmatter.get("created"))
+        if created is not None:
+            created_counts[created] += 1
+        updated = _parse_iso_date(meta.frontmatter.get("updated"))
+        if updated is not None:
+            updated_counts[updated] += 1
 
         layer = _layer_for(meta.path, layer_dirs)
         if layer is None:
             continue
         notes_per_layer[layer] += 1
 
-        created = _parse_iso_date(meta.frontmatter.get("created"))
         if created is not None:
             age = max(0, (today - created).days)
             if age <= 7:
@@ -92,14 +124,29 @@ def compute_stats(vault: Path) -> VaultStats:
                 created_30d[layer] += 1
             if layer == "inbox":
                 inbox_ages.append(age)
+            layer_created_counts[layer][created] += 1
 
         if layer == "journal":
             stem_date = _parse_iso_date(meta.path.stem)
             if stem_date is not None:
                 journal_dates.add(stem_date)
 
-    top_tags = sorted(tag_counts.items(), key=lambda kv: (-kv[1], kv[0]))[:5]
+        if layer == "projects" and status_field and statuses:
+            value = meta.frontmatter.get(status_field)
+            # str() to match Index.by_status semantics on non-string YAML values
+            if value is not None and str(value) in statuses:
+                project_status_counts[str(value)] += 1
+
+    sorted_tags = sorted(tag_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    top_tags = sorted_tags[:5]
+    all_tag_counts = dict(sorted_tags)
     inbox_oldest_age = max(inbox_ages) if inbox_ages else None
+
+    project_status = (
+        {s: project_status_counts.get(s, 0) for s in statuses}
+        if status_field and statuses
+        else None
+    )
 
     return VaultStats(
         total_notes=len(real_notes),
@@ -111,6 +158,20 @@ def compute_stats(vault: Path) -> VaultStats:
         inbox_oldest_age_days=inbox_oldest_age,
         orphan_count=sum(1 for m in real_notes if m.validation_errors),
         conflict_count=conflict_count,
+        all_tag_counts=all_tag_counts,
+        daily_created=_daily_window(created_counts, today),
+        daily_updated=_daily_window(updated_counts, today),
+        weekly_created=_aggregate_sorted(created_counts, _iso_week_key),
+        monthly_created=_aggregate_sorted(created_counts, _month_key),
+        growth_by_layer={
+            layer: _cumulative_growth(layer_created_counts[layer])
+            for layer in LAYER_KEYS
+        },
+        tag_cooccurrence=sorted(
+            ((a, b, count) for (a, b), count in cooccurrence.items()),
+            key=lambda t: (-t[2], t[0], t[1]),
+        ),
+        project_status=project_status,
     )
 
 
@@ -133,6 +194,42 @@ def _parse_iso_date(value: object) -> date | None:
         return date.fromisoformat(value)
     except ValueError:
         return None
+
+
+def _daily_window(counts: Counter[date], today: date) -> dict[str, int]:
+    """Zero-filled `DAILY_WINDOW_DAYS`-day window ending at `today`, ISO-date keyed."""
+    start = today - timedelta(days=DAILY_WINDOW_DAYS - 1)
+    days = (start + timedelta(days=i) for i in range(DAILY_WINDOW_DAYS))
+    return {d.isoformat(): counts.get(d, 0) for d in days}
+
+
+def _iso_week_key(d: date) -> str:
+    iso_year, iso_week, _ = d.isocalendar()
+    return f"{iso_year}-W{iso_week:02d}"
+
+
+def _month_key(d: date) -> str:
+    return f"{d.year:04d}-{d.month:02d}"
+
+
+def _aggregate_sorted(
+    counts: Counter[date], key_fn: Callable[[date], str]
+) -> dict[str, int]:
+    """Bucket `counts` by `key_fn`, over all dates present, keys sorted ascending."""
+    buckets: Counter[str] = Counter()
+    for d, n in counts.items():
+        buckets[key_fn(d)] += n
+    return dict(sorted(buckets.items()))
+
+
+def _cumulative_growth(counts: Counter[date]) -> list[tuple[str, int]]:
+    """Date-ascending cumulative count at each distinct date; `[]` if none."""
+    cumulative = 0
+    entries = []
+    for d in sorted(counts):
+        cumulative += counts[d]
+        entries.append((d.isoformat(), cumulative))
+    return entries
 
 
 def _compute_streak(journal_dates: set[date], today: date) -> int:

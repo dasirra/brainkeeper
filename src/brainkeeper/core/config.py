@@ -47,6 +47,7 @@ class LayerOptions(BaseModel):
     format: str | None = None
     status_field: str | None = None
     active_values: list[str] | None = None
+    statuses: list[str] | None = None
     year_subfolder: bool | None = None
 
 
