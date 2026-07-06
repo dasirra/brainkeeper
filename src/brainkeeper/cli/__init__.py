@@ -40,6 +40,14 @@ def main(argv: list[str] | None = None) -> int:
     sp_stats.add_argument(
         "--json", action="store_true", help="Emit full stats as JSON instead of text"
     )
+    sp_stats.add_argument(
+        "--html",
+        nargs="?",
+        const="brainkeeper-stats.html",
+        default=None,
+        metavar="PATH",
+        help="Write a self-contained HTML report (default: ./brainkeeper-stats.html)",
+    )
 
     args = parser.parse_args(argv)
 

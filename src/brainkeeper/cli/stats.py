@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 import yaml
 
 from ..core.stats import INBOX_ROT_DAYS, LAYER_KEYS, VaultStats, compute_stats
+from .report import render_report
 
 _LAYER_LABELS = {
     "inbox": "Inbox",
@@ -38,8 +40,15 @@ def run(args) -> int:
         )
         return 1
 
+    html_requested = args.html is not None
     if args.json:
         print(json.dumps(stats_json(stats), indent=2))
+    if html_requested:
+        path = Path(args.html)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(render_report(stats), encoding="utf-8")
+        print(str(path), file=sys.stderr if args.json else sys.stdout)
+    if args.json or html_requested:
         return 0
 
     lines = [
