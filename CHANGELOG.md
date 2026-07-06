@@ -9,9 +9,9 @@ Two artifacts are versioned independently:
 - **`spec-vX.Y.Z`**: the brainkeeper specification (`spec/`).
 - **`brainkeeper-vX.Y.Z`**: the `brainkeeper` Python package, which contains the vault engine library, the MCP server, and the CLI.
 
-## [brainkeeper-v0.3.0] - Unreleased
+## [brainkeeper-v0.3.0] - 2026-07-06
 
-The vault location is now fixed at `~/.brainkeeper/vault`, deliberately not configurable.
+> ⚠️ **Breaking release.** The vault location changes: it is now fixed at `~/.brainkeeper/vault`, deliberately not configurable. Existing vaults must be moved into place and `--vault` flags removed (see Migration below).
 
 ### Changed
 - **Breaking:** `serve` loses `--vault`. The server always serves `~/.brainkeeper/vault`; if it doesn't exist, `serve` exits with an error pointing at `brainkeeper init`.
