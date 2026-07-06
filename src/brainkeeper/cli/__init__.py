@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("init", help="Bootstrap the vault at ~/.brainkeeper/vault")
 
-    sub.add_parser(
+    sp_stats = sub.add_parser(
         "stats",
         help="Show vault progress, health, and structure summary",
         description=(
@@ -36,6 +36,9 @@ def main(argv: list[str] | None = None) -> int:
             "Day-based metrics (7/30-day windows, journal streak, inbox age) "
             "use local calendar days."
         ),
+    )
+    sp_stats.add_argument(
+        "--json", action="store_true", help="Emit full stats as JSON instead of text"
     )
 
     args = parser.parse_args(argv)

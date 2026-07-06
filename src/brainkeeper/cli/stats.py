@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 
 import yaml
@@ -37,16 +38,57 @@ def run(args) -> int:
         )
         return 1
 
+    if args.json:
+        print(json.dumps(stats_json(stats), indent=2))
+        return 0
+
     lines = [
         "Progress",
         *_progress_lines(stats),
         "Health",
         *_health_lines(stats),
+        *(
+            ["Project status", *_project_status_lines(stats)]
+            if stats.project_status is not None
+            else []
+        ),
         "Structure",
         *_structure_lines(stats),
     ]
     print("\n".join(lines))
     return 0
+
+
+def stats_json(stats: VaultStats) -> dict:
+    """Serialize `stats` to the full JSON document (superset of the terminal view)."""
+    payload = {
+        "total_notes": stats.total_notes,
+        "notes_per_layer": stats.notes_per_layer,
+        "created_7d_per_layer": stats.created_7d_per_layer,
+        "created_30d_per_layer": stats.created_30d_per_layer,
+        "journal_streak": stats.journal_streak,
+        "health": {
+            "inbox_oldest_age_days": stats.inbox_oldest_age_days,
+            "orphan_count": stats.orphan_count,
+            "conflict_count": stats.conflict_count,
+        },
+        "top_tags": [list(pair) for pair in stats.top_tags],
+        "tag_counts": stats.all_tag_counts,
+        "tag_cooccurrence": [list(triple) for triple in stats.tag_cooccurrence],
+        "series": {
+            "daily_created": stats.daily_created,
+            "daily_updated": stats.daily_updated,
+            "weekly_created": stats.weekly_created,
+            "monthly_created": stats.monthly_created,
+            "growth_by_layer": {
+                layer: [list(point) for point in points]
+                for layer, points in stats.growth_by_layer.items()
+            },
+        },
+    }
+    if stats.project_status is not None:
+        payload["project_status"] = stats.project_status
+    return payload
 
 
 def _progress_lines(stats: VaultStats) -> list[str]:
@@ -83,6 +125,10 @@ def _health_lines(stats: VaultStats) -> list[str]:
         f"  Orphans: {orphans}",
         f"  Sync conflicts: {conflicts}",
     ]
+
+
+def _project_status_lines(stats: VaultStats) -> list[str]:
+    return [f"  {status}: {count}" for status, count in stats.project_status.items()]
 
 
 def _structure_lines(stats: VaultStats) -> list[str]:
