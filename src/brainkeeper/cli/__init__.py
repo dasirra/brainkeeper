@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import serve as _serve
 from . import init as _init
+from . import stats as _stats
 
 
 def vault_path() -> Path:
@@ -27,6 +28,16 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("init", help="Bootstrap the vault at ~/.brainkeeper/vault")
 
+    sub.add_parser(
+        "stats",
+        help="Show vault progress, health, and structure summary",
+        description=(
+            "Show vault progress, health, and structure summary. "
+            "Day-based metrics (7/30-day windows, journal streak, inbox age) "
+            "use local calendar days."
+        ),
+    )
+
     args = parser.parse_args(argv)
 
     if args.command is None:
@@ -36,6 +47,8 @@ def main(argv: list[str] | None = None) -> int:
     args.vault = vault_path()
     if args.command == "serve":
         return _serve.run(args)
+    if args.command == "stats":
+        return _stats.run(args)
     return _init.run(args)
 
 
