@@ -56,8 +56,10 @@ def compute_stats(vault: Path) -> VaultStats:
 
     Sync-conflict files (`*.sync-conflict-*.md`) are counted separately and
     excluded from every other count, tag, and orphan check. Notes outside
-    the six canonical layers still count toward `total_notes` but not
-    toward any per-layer breakdown.
+    the six canonical layers still count toward `total_notes` and the
+    whole-vault series (`daily_created`, `daily_updated`, `weekly_created`,
+    `monthly_created`) but not toward any per-layer breakdown, so summing a
+    per-layer field will not necessarily match the vault-wide series.
     """
     config = ConfigLoader(vault).load()
     index = Index(vault)
@@ -76,9 +78,9 @@ def compute_stats(vault: Path) -> VaultStats:
     layer_dirs = {key: config.layer_path(key) for key in LAYER_KEYS}
     today = date.today()
 
-    project_opts = getattr(config.layers, "projects", None)
-    status_field = getattr(project_opts, "status_field", None)
-    statuses = getattr(project_opts, "statuses", None)
+    project_opts = config.layers.projects
+    status_field = project_opts.status_field
+    statuses = project_opts.statuses
     project_status_counts: Counter[str] = Counter()
 
     notes_per_layer = dict.fromkeys(LAYER_KEYS, 0)
@@ -131,11 +133,13 @@ def compute_stats(vault: Path) -> VaultStats:
 
         if layer == "projects" and status_field and statuses:
             value = meta.frontmatter.get(status_field)
-            if value in statuses:
-                project_status_counts[value] += 1
+            # str() to match Index.by_status semantics on non-string YAML values
+            if value is not None and str(value) in statuses:
+                project_status_counts[str(value)] += 1
 
-    top_tags = sorted(tag_counts.items(), key=lambda kv: (-kv[1], kv[0]))[:5]
-    all_tag_counts = dict(sorted(tag_counts.items(), key=lambda kv: (-kv[1], kv[0])))
+    sorted_tags = sorted(tag_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    top_tags = sorted_tags[:5]
+    all_tag_counts = dict(sorted_tags)
     inbox_oldest_age = max(inbox_ages) if inbox_ages else None
 
     project_status = (
@@ -195,12 +199,8 @@ def _parse_iso_date(value: object) -> date | None:
 def _daily_window(counts: Counter[date], today: date) -> dict[str, int]:
     """Zero-filled `DAILY_WINDOW_DAYS`-day window ending at `today`, ISO-date keyed."""
     start = today - timedelta(days=DAILY_WINDOW_DAYS - 1)
-    return {
-        (start + timedelta(days=i)).isoformat(): counts.get(
-            start + timedelta(days=i), 0
-        )
-        for i in range(DAILY_WINDOW_DAYS)
-    }
+    days = (start + timedelta(days=i) for i in range(DAILY_WINDOW_DAYS))
+    return {d.isoformat(): counts.get(d, 0) for d in days}
 
 
 def _iso_week_key(d: date) -> str:

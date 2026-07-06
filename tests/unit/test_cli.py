@@ -7,6 +7,7 @@ from freezegun import freeze_time
 
 from brainkeeper.cli import main
 from conftest import write_note as _write_note
+from conftest import write_status_config as _write_status_config
 
 _LAYER_DIRS = [
     "00 Inbox",
@@ -233,28 +234,8 @@ def test_stats_repeat_runs_identical_output(
 # --- stats --json: shared helpers --------------------------------------------
 
 
-def _write_status_config(vault: Path) -> None:
-    """Overwrite the fixture's brainkeeper.yaml with statuses configured on projects."""
-    (vault / "brainkeeper.yaml").write_text(
-        "layers:\n"
-        '  inbox: "00 Inbox"\n'
-        '  journal: "10 Journal"\n'
-        "  projects:\n"
-        '    path: "20 Projects"\n'
-        "    status_field: status\n"
-        "    statuses: [active, stalled, done]\n"
-        '  areas: "30 Areas"\n'
-        '  brain: "40 Brain"\n'
-        '  archive: "90 Archive"\n'
-    )
-
-
 def _write_project(path: Path, status: str, created: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        f"---\ncreated: {created}\nupdated: {created}\ntags: [x]\n"
-        f"status: {status}\n---\nbody\n"
-    )
+    _write_note(path, created, status=status)
 
 
 # --- stats --json: C1 valid JSON + exit 0 -------------------------------------

@@ -10,6 +10,7 @@ from freezegun import freeze_time
 
 from brainkeeper.core.stats import INBOX_ROT_DAYS, LAYER_KEYS, compute_stats
 from conftest import write_note as _write
+from conftest import write_status_config as _write_status_config
 
 TODAY = date(2025, 6, 15)
 
@@ -503,31 +504,8 @@ def test_empty_vault_new_fields_zeroed(minimal_vault: Path):
 # --- C25/C26/C28: project status --------------------------------------------
 
 
-def _write_status_config(vault: Path) -> None:
-    """Overwrite the fixture's brainkeeper.yaml with statuses configured on projects."""
-    (vault / "brainkeeper.yaml").write_text(
-        "layers:\n"
-        '  inbox: "00 Inbox"\n'
-        "  journal:\n"
-        '    path: "10 Journal"\n'
-        '    format: "YYYY-MM-DD.md"\n'
-        "  projects:\n"
-        '    path: "20 Projects"\n'
-        "    status_field: status\n"
-        "    statuses: [active, stalled, done]\n"
-        '  areas: "30 Areas"\n'
-        '  brain: "40 Brain"\n'
-        "  archive:\n"
-        '    path: "90 Archive"\n'
-        "    year_subfolder: true\n"
-    )
-
-
 def _write_project(path: Path, status: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        f"---\ncreated: {_d(0)}\nupdated: {_d(0)}\ntags: [x]\nstatus: {status}\n---\nbody\n"
-    )
+    _write(path, _d(0), status=status)
 
 
 def test_project_status_configured_counts(minimal_vault: Path):
@@ -570,3 +548,25 @@ def test_project_status_value_outside_set_not_counted(minimal_vault: Path):
     stats = compute_stats(minimal_vault)
 
     assert stats.project_status == {"active": 1, "stalled": 0, "done": 0}
+
+
+def test_project_status_coerces_non_string_values(minimal_vault: Path):
+    """Unquoted YAML scalars (e.g. `status: 1`) are matched via str(), like Index.by_status."""
+    (minimal_vault / "brainkeeper.yaml").write_text(
+        "layers:\n"
+        '  inbox: "00 Inbox"\n'
+        '  journal: "10 Journal"\n'
+        "  projects:\n"
+        '    path: "20 Projects"\n'
+        "    status_field: status\n"
+        '    statuses: ["1", active]\n'
+        '  areas: "30 Areas"\n'
+        '  brain: "40 Brain"\n'
+        '  archive: "90 Archive"\n'
+    )
+    # write_note emits `status: 1` unquoted, which YAML parses as int 1
+    _write_project(minimal_vault / "20 Projects" / "p1.md", "1")
+
+    stats = compute_stats(minimal_vault)
+
+    assert stats.project_status == {"1": 1, "active": 0}

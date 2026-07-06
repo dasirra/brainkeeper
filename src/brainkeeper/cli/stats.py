@@ -72,18 +72,15 @@ def stats_json(stats: VaultStats) -> dict:
             "orphan_count": stats.orphan_count,
             "conflict_count": stats.conflict_count,
         },
-        "top_tags": [list(pair) for pair in stats.top_tags],
+        "top_tags": stats.top_tags,
         "tag_counts": stats.all_tag_counts,
-        "tag_cooccurrence": [list(triple) for triple in stats.tag_cooccurrence],
+        "tag_cooccurrence": stats.tag_cooccurrence,
         "series": {
             "daily_created": stats.daily_created,
             "daily_updated": stats.daily_updated,
             "weekly_created": stats.weekly_created,
             "monthly_created": stats.monthly_created,
-            "growth_by_layer": {
-                layer: [list(point) for point in points]
-                for layer, points in stats.growth_by_layer.items()
-            },
+            "growth_by_layer": stats.growth_by_layer,
         },
     }
     if stats.project_status is not None:
