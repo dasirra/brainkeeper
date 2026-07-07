@@ -126,7 +126,10 @@ def test_zero_script_tags(tmp_path: Path, monkeypatch, capsys):
 
     main(["stats", "--html", str(report_path)])
     text = report_path.read_text()
-    assert "<script" not in text.lower()
+    # one inline script block (chart interactivity); never an external one
+    assert text.lower().count("<script") == 1
+    assert "<script>" in text
+    assert not re.search(r"<script[^>]+src=", text, re.I)
 
 
 # --- C8/C9: streak + inbox-age tiles match --json --------------------------------
@@ -225,7 +228,8 @@ def test_dark_mode_media_query_present(tmp_path: Path, monkeypatch, capsys):
     main(["stats", "--html", str(report_path)])
     text = report_path.read_text()
     assert "prefers-color-scheme" in text
-    assert "<script" not in text.lower()
+    # theming must not depend on the chart script
+    assert "prefers-color-scheme" in text.split("<script")[0]
 
 
 # --- C12: empty vault -> valid page, labeled empties, exit 0 --------------------
@@ -346,9 +350,18 @@ _HM_CELL_RE = re.compile(
 
 
 def _section(html_text: str, class_name: str) -> str:
-    match = re.search(rf'<section class="{class_name}">.*?</section>', html_text, re.S)
+    match = re.search(
+        rf'<section class="{class_name}"[^>]*>.*?</section>', html_text, re.S
+    )
     assert match, f"{class_name} section not found"
     return match.group()
+
+
+_LAYER_TILE_RE = re.compile(
+    r'<div class="tile accent-\w+">'
+    r'<div class="tile-value">(\d+)</div>'
+    r'<div class="tile-label">([^<]*)</div></div>'
+)
 
 
 def _chart_after_heading(section_html: str, heading: str) -> str:
@@ -431,6 +444,8 @@ def test_growth_polyline_monotonic_and_matches_layer_total(
     main(["stats", "--html", str(report_path)])
     capsys.readouterr()
     growth = _section(report_path.read_text(), "growth")
+    # scope to the cumulative group: the daily group reuses the same classes
+    growth = growth[growth.index('id="growth-cum"') : growth.index('id="growth-day"')]
 
     match = re.search(r'<polyline class="line-brain" points="([^"]*)"/>', growth)
     assert match
@@ -458,14 +473,13 @@ def test_notes_per_layer_chart_has_six_rows(
 
     main(["stats", "--html", str(report_path)])
     bars = _section(report_path.read_text(), "bars")
-    layer_chart = _chart_after_heading(bars, "Notes per layer")
-    rows = _BAR_ROW_RE.findall(layer_chart)
+    layer_block = _chart_after_heading(bars, "Notes per layer")
+    tiles = _LAYER_TILE_RE.findall(layer_block)
 
-    assert len(rows) == 6
-    labels = [label for label, _, _ in rows]
+    assert len(tiles) == 6
+    labels = [label for _, label in tiles]
     assert labels == ["Inbox", "Journal", "Projects", "Areas", "Brain", "Archive"]
-    counts = {label: int(count) for label, _, count in rows}
-    widths = {label: float(width) for label, width, _ in rows}
+    counts = {label: int(count) for count, label in tiles}
     assert counts == {
         "Inbox": 0,
         "Journal": 0,
@@ -474,8 +488,6 @@ def test_notes_per_layer_chart_has_six_rows(
         "Brain": 2,
         "Archive": 0,
     }
-    assert widths["Inbox"] == 0.0  # zero count -> zero width
-    assert widths["Brain"] > widths["Projects"] > 0  # widest for the largest count
 
 
 # --- C18: top-tags chart: one row per tag, labels escaped -----------------------
@@ -548,10 +560,10 @@ def test_empty_vault_growth_and_bars_labeled_empty(tmp_path: Path, monkeypatch, 
     tag_chart = _chart_after_heading(bars, "Top tags")
     assert "No tags yet" in tag_chart
 
-    layer_chart = _chart_after_heading(bars, "Notes per layer")
-    rows = _BAR_ROW_RE.findall(layer_chart)
-    assert len(rows) == 6
-    assert all(int(count) == 0 for _, _, count in rows)
+    layer_block = _chart_after_heading(bars, "Notes per layer")
+    tiles = _LAYER_TILE_RE.findall(layer_block)
+    assert len(tiles) == 6
+    assert all(int(count) == 0 for count, _ in tiles)
 
 
 # --- C20: external-request scan still clean on a fully populated report ---------
@@ -820,9 +832,9 @@ def test_html_values_match_json_across_sections(
     assert re.search(rf'tile-value">{payload["total_notes"]}</div>', text)
 
     bars = _section(text, "bars")
-    layer_chart = _chart_after_heading(bars, "Notes per layer")
+    layer_block = _chart_after_heading(bars, "Notes per layer")
     layer_rows = {
-        label: int(count) for label, _, count in _BAR_ROW_RE.findall(layer_chart)
+        label: int(count) for count, label in _LAYER_TILE_RE.findall(layer_block)
     }
     for key, count in payload["notes_per_layer"].items():
         assert layer_rows[LAYER_LABELS[key]] == count

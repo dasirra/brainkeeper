@@ -1,10 +1,11 @@
 """Render a self-contained, offline HTML report from a `VaultStats` snapshot.
 
 Pure `VaultStats -> str`; no disk I/O (the caller in `cli/stats.py` writes the
-file). No `<script>` tags anywhere: theming is CSS-only via
-`prefers-color-scheme`, and there is no run-varying content (no clocks,
-no randomness) so the same vault renders byte-identical output on the same
-day.
+file). Fully self-contained: zero external requests, theming is CSS-only via
+`prefers-color-scheme`, and the only script is a small inline block driving
+the growth chart's hover tooltip and cumulative/daily toggle. There is no
+run-varying content (no clocks, no randomness) so the same vault renders
+byte-identical output on the same day.
 """
 
 from __future__ import annotations
@@ -80,7 +81,28 @@ section { margin-top: 2rem; }
 .line-areas { stroke: var(--line-areas); background-color: var(--line-areas); }
 .line-brain { stroke: var(--line-brain); background-color: var(--line-brain); }
 .line-archive { stroke: var(--line-archive); background-color: var(--line-archive); }
-.vertex { fill: var(--fg); }
+.dot-inbox { fill: var(--line-inbox); }
+.dot-journal { fill: var(--line-journal); }
+.dot-projects { fill: var(--line-projects); }
+.dot-areas { fill: var(--line-areas); }
+.dot-brain { fill: var(--line-brain); }
+.dot-archive { fill: var(--line-archive); }
+.growth { position: relative; }
+.growth-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.toggle-btn { background: var(--tile-bg); color: var(--fg); border: 1px solid var(--muted); border-radius: 6px; padding: 0.3rem 0.8rem; font: inherit; font-size: 0.8rem; cursor: pointer; }
+.toggle-btn:hover { border-color: var(--fg); }
+.tooltip { position: absolute; background: var(--tile-bg); color: var(--fg); border: 1px solid var(--muted); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.8rem; pointer-events: none; white-space: nowrap; z-index: 1; }
+.hover-strip { fill: transparent; }
+.hover-strip:hover { fill: var(--fg); fill-opacity: 0.05; }
+svg g[hidden] { display: none; }
+.axis { stroke: var(--muted); stroke-width: 1; }
+.axis-label { fill: var(--muted); font-size: 0.7rem; }
+.tile.accent-inbox { border-left: 4px solid var(--line-inbox); }
+.tile.accent-journal { border-left: 4px solid var(--line-journal); }
+.tile.accent-projects { border-left: 4px solid var(--line-projects); }
+.tile.accent-areas { border-left: 4px solid var(--line-areas); }
+.tile.accent-brain { border-left: 4px solid var(--line-brain); }
+.tile.accent-archive { border-left: 4px solid var(--line-archive); }
 .legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; font-size: 0.85rem; padding: 0; list-style: none; }
 .legend-item { display: flex; align-items: center; gap: 0.35rem; }
 .legend-swatch { width: 0.75rem; height: 0.75rem; border-radius: 2px; display: inline-block; }
@@ -96,11 +118,48 @@ section { margin-top: 2rem; }
 """.strip()
 
 
+_SCRIPT = """
+(function () {
+  "use strict";
+  var btn = document.getElementById("growth-toggle");
+  var tip = document.getElementById("growth-tip");
+  var cum = document.getElementById("growth-cum");
+  var day = document.getElementById("growth-day");
+  var section = document.getElementById("growth-section");
+  if (!btn || !tip || !cum || !day || !section) { return; }
+  var mode = "cum";
+  btn.addEventListener("click", function () {
+    mode = mode === "cum" ? "day" : "cum";
+    cum.toggleAttribute("hidden", mode !== "cum");
+    day.toggleAttribute("hidden", mode !== "day");
+    btn.textContent = mode === "cum" ? "Daily" : "Cumulative";
+    tip.hidden = true;
+  });
+  Array.prototype.forEach.call(
+    document.querySelectorAll(".hover-strip"),
+    function (strip) {
+      strip.addEventListener("mousemove", function (ev) {
+        var rows = strip.getAttribute(mode === "cum" ? "data-cum" : "data-day");
+        tip.innerHTML =
+          "<strong>" + strip.getAttribute("data-date") + "</strong><br>" +
+          rows.split("|").join("<br>");
+        tip.hidden = false;
+        var box = section.getBoundingClientRect();
+        tip.style.left = ev.clientX - box.left + 14 + "px";
+        tip.style.top = ev.clientY - box.top - 10 + "px";
+      });
+      strip.addEventListener("mouseleave", function () { tip.hidden = true; });
+    }
+  );
+})();
+""".strip()
+
+
 def render_report(stats: VaultStats) -> str:
     """Assemble the full self-contained HTML document for `stats`."""
     body = "".join(
         [
-            "<h1>brainkeeper vault stats</h1>",
+            "<h1>Brainkeeper Vault Stats</h1>",
             _tiles_section(stats),
             _growth_section(stats),
             _bars_section(stats),
@@ -113,10 +172,12 @@ def render_report(stats: VaultStats) -> str:
         "<head>\n"
         '<meta charset="utf-8" />\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1" />\n'
-        "<title>brainkeeper vault stats</title>\n"
+        "<title>Brainkeeper Vault Stats</title>\n"
         f"<style>{_STYLE}</style>\n"
         "</head>\n"
-        f"<body><main>{body}</main></body>\n"
+        f"<body><main>{body}</main>\n"
+        f"<script>{_SCRIPT}</script>\n"
+        "</body>\n"
         "</html>\n"
     )
 
@@ -159,51 +220,137 @@ def _growth_section(stats: VaultStats) -> str:  # T2
         layer: [(date.fromisoformat(d), v) for d, v in stats.growth_by_layer[layer]]
         for layer in populated
     }
-    all_dates = [d for points in parsed.values() for d, _ in points]
-    min_date, max_date = min(all_dates), max(all_dates)
+    union_dates = sorted({d for points in parsed.values() for d, _ in points})
+    min_date, max_date = union_dates[0], union_dates[-1]
     span_days = (max_date - min_date).days
-    maxval = max(parsed[layer][-1][1] for layer in populated)
+    cum_max = max(parsed[layer][-1][1] for layer in populated)
+
+    # per-day created counts per layer: diffs of the cumulative series
+    day_at: dict[str, dict[date, int]] = {}
+    cum_at: dict[str, dict[date, int]] = {}
+    for layer in populated:
+        prev = 0
+        day_at[layer] = {}
+        events = dict(parsed[layer])
+        for d, v in parsed[layer]:
+            day_at[layer][d] = v - prev
+            prev = v
+        running = 0
+        cum_at[layer] = {}
+        for d in union_dates:
+            running = events.get(d, running)
+            cum_at[layer][d] = running
+    day_max = max(max(day_at[layer].values()) for layer in populated)
 
     def x_of(d: date) -> float:
         if span_days == 0:
             return _GROWTH_X1
         return _GROWTH_X0 + (d - min_date).days / span_days * (_GROWTH_X1 - _GROWTH_X0)
 
-    def y_of(value: int) -> float:
+    def y_of(value: int, maxval: int) -> float:
         return _GROWTH_Y1 - (value / maxval) * (_GROWTH_Y1 - _GROWTH_Y0)
 
-    lines = []
-    legend_items = []
-    for layer in populated:
-        points = [(x_of(d), y_of(v)) for d, v in parsed[layer]]
-        poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
-        lines.append(f'<polyline class="line-{layer}" points="{poly}"/>')
-        lines.extend(
-            f'<circle class="vertex" cx="{x:.1f}" cy="{y:.1f}" r="2.5"/>'
-            for x, y in points
+    def chart_group(group_id: str, maxval: int, hidden: bool) -> str:
+        parts = [f'<g id="{group_id}"' + (" hidden>" if hidden else ">")]
+        for tick in (0, maxval // 2, maxval) if maxval > 1 else (0, maxval):
+            parts.append(
+                f'<text class="axis-label" text-anchor="end" x="{_GROWTH_X0 - 6}" '
+                f'y="{y_of(tick, maxval) + 3:.1f}">{tick}</text>'
+            )
+        for layer in populated:
+            if group_id == "growth-cum":
+                pts = [(x_of(d), y_of(v, maxval)) for d, v in parsed[layer]]
+            else:
+                pts = [
+                    (x_of(d), y_of(day_at[layer].get(d, 0), maxval))
+                    for d in union_dates
+                ]
+            poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+            parts.append(f'<polyline class="line-{layer}" points="{poly}"/>')
+            dot_pts = (
+                pts
+                if group_id == "growth-cum"
+                else [(x_of(d), y_of(day_at[layer][d], maxval)) for d in day_at[layer]]
+            )
+            parts.extend(
+                f'<circle class="dot-{layer}" cx="{x:.1f}" cy="{y:.1f}" r="1.5"/>'
+                for x, y in dot_pts
+            )
+        parts.append("</g>")
+        return "".join(parts)
+
+    # invisible per-day strips carrying the tooltip data for both modes
+    strips = []
+    xs = [x_of(d) for d in union_dates]
+    for i, d in enumerate(union_dates):
+        left = _GROWTH_X0 if i == 0 else (xs[i - 1] + xs[i]) / 2
+        right = _GROWTH_X1 if i == len(xs) - 1 else (xs[i] + xs[i + 1]) / 2
+        cum_rows = "|".join(
+            f"{LAYER_LABELS[layer]}: {cum_at[layer][d]}" for layer in populated
         )
-        legend_items.append(
-            '<li class="legend-item">'
-            f'<span class="legend-swatch line-{layer}"></span>'
-            f"{html.escape(LAYER_LABELS[layer])}</li>"
+        day_rows = "|".join(
+            f"{LAYER_LABELS[layer]}: {day_at[layer].get(d, 0)}" for layer in populated
+        )
+        strips.append(
+            f'<rect class="hover-strip" x="{left:.1f}" y="{_GROWTH_Y0}" '
+            f'width="{max(right - left, 1):.1f}" height="{_GROWTH_Y1 - _GROWTH_Y0}" '
+            f'data-date="{d.isoformat()}" data-cum="{cum_rows}" data-day="{day_rows}"/>'
         )
 
+    x_ticks = sorted({min_date, union_dates[len(union_dates) // 2], max_date})
+    # anchor edge labels inward so they stay inside the viewBox
+    anchors = {min_date: "start", max_date: "end"}
+    x_labels = "".join(
+        f'<text class="axis-label" text-anchor="{anchors.get(d, "middle")}" '
+        f'x="{x_of(d):.1f}" y="{_GROWTH_Y1 + 18}">{d.isoformat()}</text>'
+        for d in x_ticks
+    )
+    axes = (
+        f'<line class="axis" x1="{_GROWTH_X0}" y1="{_GROWTH_Y1}" '
+        f'x2="{_GROWTH_X1}" y2="{_GROWTH_Y1}"/>'
+        f'<line class="axis" x1="{_GROWTH_X0}" y1="{_GROWTH_Y0}" '
+        f'x2="{_GROWTH_X0}" y2="{_GROWTH_Y1}"/>'
+    )
+
     svg = (
-        '<svg viewBox="0 0 720 240" role="img" aria-label="Growth by layer">'
-        + "".join(lines)
+        '<svg viewBox="0 0 720 250" role="img" aria-label="Growth by layer">'
+        + axes
+        + x_labels
+        + chart_group("growth-cum", cum_max, hidden=False)
+        + chart_group("growth-day", day_max, hidden=True)
+        + "".join(strips)
         + "</svg>"
     )
+    legend_items = [
+        '<li class="legend-item">'
+        f'<span class="legend-swatch line-{layer}"></span>'
+        f"{html.escape(LAYER_LABELS[layer])}</li>"
+        for layer in populated
+    ]
     legend = '<ul class="legend">' + "".join(legend_items) + "</ul>"
+    header = (
+        '<div class="growth-header"><h2>Growth by layer</h2>'
+        '<button type="button" class="toggle-btn" id="growth-toggle">Daily</button>'
+        "</div>"
+    )
+    tooltip = '<div class="tooltip" id="growth-tip" hidden></div>'
     return (
-        '<section class="growth"><h2>Growth by layer</h2>' + svg + legend + "</section>"
+        '<section class="growth" id="growth-section">'
+        + header
+        + svg
+        + legend
+        + tooltip
+        + "</section>"
     )
 
 
 def _bars_section(stats: VaultStats) -> str:  # T2
-    layer_rows = [
-        (LAYER_LABELS[layer], stats.notes_per_layer[layer]) for layer in LAYER_KEYS
-    ]
-    layer_chart = _bar_chart(layer_rows, "Notes per layer")
+    layer_tiles = "".join(
+        f'<div class="tile accent-{layer}">'
+        f'<div class="tile-value">{stats.notes_per_layer[layer]}</div>'
+        f'<div class="tile-label">{html.escape(LAYER_LABELS[layer])}</div></div>'
+        for layer in LAYER_KEYS
+    )
 
     if stats.top_tags:
         tag_chart = _bar_chart(list(stats.top_tags), "Top tags")
@@ -212,7 +359,7 @@ def _bars_section(stats: VaultStats) -> str:  # T2
 
     return (
         '<section class="bars"><h2>Notes per layer</h2>'
-        + layer_chart
+        + f'<div class="tiles">{layer_tiles}</div>'
         + "<h2>Top tags</h2>"
         + tag_chart
         + "</section>"
