@@ -12,18 +12,7 @@ from __future__ import annotations
 import html
 from datetime import date
 
-from ..core.stats import INBOX_ROT_DAYS, LAYER_KEYS, VaultStats
-
-# ponytail: duplicated from cli/stats.py rather than imported, to avoid a
-# stats.py <-> report.py circular import (stats.py imports render_report).
-_LAYER_LABELS = {
-    "inbox": "Inbox",
-    "journal": "Journal",
-    "projects": "Projects",
-    "areas": "Areas",
-    "brain": "Brain",
-    "archive": "Archive",
-}
+from ..core.stats import LAYER_KEYS, LAYER_LABELS, VaultStats, inbox_state
 
 _STYLE = """
 :root {
@@ -134,16 +123,12 @@ def render_report(stats: VaultStats) -> str:
 
 def _tiles_section(stats: VaultStats) -> str:
     age = stats.inbox_oldest_age_days
-    if age is None:
+    state = inbox_state(age)
+    if state == "empty":
         inbox_class, inbox_value, inbox_label = "tile", "OK", "Inbox (empty)"
-    elif age > INBOX_ROT_DAYS:
-        inbox_class, inbox_value, inbox_label = (
-            "tile warn",
-            str(age),
-            "Inbox age (days)",
-        )
     else:
-        inbox_class, inbox_value, inbox_label = "tile", str(age), "Inbox age (days)"
+        inbox_class = "tile warn" if state == "rotting" else "tile"
+        inbox_value, inbox_label = str(age), "Inbox age (days)"
 
     return (
         '<section class="tiles">'
@@ -170,14 +155,14 @@ def _growth_section(stats: VaultStats) -> str:  # T2
             + "</section>"
         )
 
-    all_dates = [
-        date.fromisoformat(d)
+    parsed = {
+        layer: [(date.fromisoformat(d), v) for d, v in stats.growth_by_layer[layer]]
         for layer in populated
-        for d, _ in stats.growth_by_layer[layer]
-    ]
+    }
+    all_dates = [d for points in parsed.values() for d, _ in points]
     min_date, max_date = min(all_dates), max(all_dates)
     span_days = (max_date - min_date).days
-    maxval = max(stats.growth_by_layer[layer][-1][1] for layer in populated)
+    maxval = max(parsed[layer][-1][1] for layer in populated)
 
     def x_of(d: date) -> float:
         if span_days == 0:
@@ -190,10 +175,7 @@ def _growth_section(stats: VaultStats) -> str:  # T2
     lines = []
     legend_items = []
     for layer in populated:
-        points = [
-            (x_of(date.fromisoformat(d)), y_of(v))
-            for d, v in stats.growth_by_layer[layer]
-        ]
+        points = [(x_of(d), y_of(v)) for d, v in parsed[layer]]
         poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
         lines.append(f'<polyline class="line-{layer}" points="{poly}"/>')
         lines.extend(
@@ -203,7 +185,7 @@ def _growth_section(stats: VaultStats) -> str:  # T2
         legend_items.append(
             '<li class="legend-item">'
             f'<span class="legend-swatch line-{layer}"></span>'
-            f"{html.escape(_LAYER_LABELS[layer])}</li>"
+            f"{html.escape(LAYER_LABELS[layer])}</li>"
         )
 
     svg = (
@@ -219,7 +201,7 @@ def _growth_section(stats: VaultStats) -> str:  # T2
 
 def _bars_section(stats: VaultStats) -> str:  # T2
     layer_rows = [
-        (_LAYER_LABELS[layer], stats.notes_per_layer[layer]) for layer in LAYER_KEYS
+        (LAYER_LABELS[layer], stats.notes_per_layer[layer]) for layer in LAYER_KEYS
     ]
     layer_chart = _bar_chart(layer_rows, "Notes per layer")
 
@@ -274,7 +256,7 @@ _HM_LEGEND_Y = _HM_GRID_H + 16
 
 def _heatmap_section(stats: VaultStats) -> str:  # T3
     cells = []
-    # ponytail: column-major i//7,i%7 fill (not Sunday-anchored GitHub weeks) —
+    # ponytail: column-major i//7,i%7 fill (not Sunday-anchored GitHub weeks):
     # simplest deterministic mapping that still guarantees today lands in the
     # final cell; true weekday alignment isn't required by the contract.
     for i, count in enumerate(stats.daily_created.values()):

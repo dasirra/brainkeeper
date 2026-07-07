@@ -112,14 +112,7 @@ def test_no_external_requests(tmp_path: Path, monkeypatch, capsys):
     report_path = tmp_path / "report.html"
 
     main(["stats", "--html", str(report_path)])
-    text = report_path.read_text()
-    assert not re.search(r"https?://", text)
-    assert not re.search(r'(src|href)="//', text)
-    assert not re.search(r"<script[^>]+src=", text, re.I)
-    assert not re.search(r"<link[^>]+stylesheet", text, re.I)
-    assert not re.search(r"url\(\s*['\"]?https?:", text, re.I)
-    assert "@font-face" not in text
-    assert "@import" not in text
+    _no_external_requests(report_path.read_text())
 
 
 # --- C7: zero <script> tags ------------------------------------------------------
@@ -271,6 +264,20 @@ def test_missing_vault_no_file_written(tmp_path: Path, monkeypatch, capsys):
     assert exit_code != 0
     assert "brainkeeper init" in captured.err
     assert not report_path.exists()
+
+
+def test_html_unwritable_target_errors_cleanly(tmp_path: Path, monkeypatch, capsys):
+    """--html pointing at an existing directory errors without a traceback."""
+    _init_vault(tmp_path, monkeypatch)
+    target_dir = tmp_path / "already-a-dir"
+    target_dir.mkdir()
+    capsys.readouterr()
+
+    exit_code = main(["stats", "--json", "--html", str(target_dir)])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "error: could not write report" in captured.err
+    assert captured.out == ""  # no partial JSON before the failure
 
 
 # --- C36: byte-identical repeat runs same day ------------------------------------
@@ -789,7 +796,7 @@ def test_report_contains_all_sections(
 def test_html_values_match_json_across_sections(
     tmp_path: Path, monkeypatch, capsys, frozen_today
 ):
-    import brainkeeper.cli.report as report_mod
+    from brainkeeper.core.stats import LAYER_LABELS
 
     vault = _init_vault(tmp_path, monkeypatch)
     today = frozen_today.isoformat()
@@ -818,7 +825,7 @@ def test_html_values_match_json_across_sections(
         label: int(count) for label, _, count in _BAR_ROW_RE.findall(layer_chart)
     }
     for key, count in payload["notes_per_layer"].items():
-        assert layer_rows[report_mod._LAYER_LABELS[key]] == count
+        assert layer_rows[LAYER_LABELS[key]] == count
 
     tag_chart = _chart_after_heading(bars, "Top tags")
     tag_rows = {label: int(count) for label, _, count in _BAR_ROW_RE.findall(tag_chart)}

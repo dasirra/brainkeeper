@@ -22,10 +22,18 @@ LAYER_KEYS: tuple[str, ...] = (
     "brain",
     "archive",
 )
+LAYER_LABELS = {key: key.capitalize() for key in LAYER_KEYS}
 _CONFLICT_GLOB = "*.sync-conflict-*.md"
 INBOX_ROT_DAYS = 14
 DAILY_WINDOW_DAYS = 364
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def inbox_state(age_days: int | None) -> str:
+    """Classify inbox health: 'empty', 'ok', or 'rotting' past INBOX_ROT_DAYS."""
+    if age_days is None:
+        return "empty"
+    return "rotting" if age_days > INBOX_ROT_DAYS else "ok"
 
 
 @dataclass
