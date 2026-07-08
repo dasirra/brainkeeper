@@ -120,7 +120,7 @@ The `brainkeeper` distribution installs four Python modules:
 | --- | --- |
 | `brainkeeper.core` | Vault engine: parser, validator, indexer, atomic writer. Usable as a library. |
 | `brainkeeper.mcp` | FastMCP server that exposes the vault to LLMs over stdio. |
-| `brainkeeper.cli` | The `brainkeeper` command (`init`, `serve`). |
+| `brainkeeper.cli` | The `brainkeeper` command (`init`, `serve`, `stats`). |
 | `brainkeeper.spec` | Bundled spec data: `SPEC.md`, JSON Schema, reference configs. |
 
 The CLI is the user surface. The MCP server is what your LLM talks to. The library is for anyone building their own tooling on top of brainkeeper-shaped vaults.
@@ -166,6 +166,21 @@ In addition to tools, the server exposes prompts (slash commands the user invoke
 | Prompt | Description |
 | --- | --- |
 | `triage_inbox` | Walk the inbox layer and propose a destination for each managed note. |
+
+## Vault stats
+
+Beyond serving agents, the CLI reports on the vault itself. `brainkeeper stats` prints a one-screen summary: a progress zone (note counts, 7- and 30-day creation split by layer, journal streak), a health zone with opinionated flags (inbox notes older than 14 days, orphans, sync-conflict files), and a structure zone (top tags, notes per layer).
+
+```bash
+uvx brainkeeper stats
+```
+
+Two other surfaces build on the same one-shot scan:
+
+- `--json` emits the complete metrics structure, including the full series too long for the terminal: per-day created activity for the last 52 weeks, weekly and monthly creation counts, per-layer cumulative growth, per-tag counts, and tag co-occurrence pairs. Everything the summary shows is present, plus more, so you can build your own tooling without parsing text.
+- `--html [PATH]` writes a single self-contained, offline HTML report (inline SVG, zero external requests, light and dark aware): stat tiles, an interactive cumulative growth curve split by layer, notes-per-layer and top-tag breakdowns, and a GitHub-style 52-week activity heatmap. It prints the file path and never opens a browser, so it is predictable in scripts and over SSH.
+
+An empty vault produces valid, structurally complete output with zeroed values on every surface; a missing vault gives the same init-suggesting error as the rest of the CLI.
 
 ## The spec
 
