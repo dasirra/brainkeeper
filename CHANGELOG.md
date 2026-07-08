@@ -9,6 +9,19 @@ Two artifacts are versioned independently:
 - **`spec-vX.Y.Z`**: the brainkeeper specification (`spec/`).
 - **`brainkeeper-vX.Y.Z`**: the `brainkeeper` Python package, which contains the vault engine library, the MCP server, and the CLI.
 
+## [brainkeeper-v0.4.0] - 2026-07-08
+
+Adds a `brainkeeper stats` command that turns the vault into a personal dashboard across three surfaces (terminal, JSON, HTML). No breaking changes.
+
+### Added
+- **`brainkeeper stats`** terminal summary: a one-screen report with a progress zone (note counts, 7- and 30-day creation split by layer, journal streak), a health zone with opinionated flags against fixed thresholds (inbox notes older than 14 days, orphans, sync-conflict files), and a structure zone (top tags, notes per layer). An optional config-aware project-status section counts projects per status when the projects layer configures `status_field` and `statuses`.
+- **`stats --json`**: emits the complete metrics structure, including the full series too long for the terminal: per-day created activity for the last 52 weeks, weekly and monthly creation counts, per-layer cumulative growth, per-tag counts, and tag co-occurrence pairs. Created activity is distinguished from updated activity.
+- **`stats --html [PATH]`**: writes a single self-contained, offline HTML report (inline SVG, zero external requests, light and dark aware). Includes stat tiles, an interactive cumulative growth curve split by layer (hover tooltip and cumulative/daily toggle), notes-per-layer and top-tag breakdowns, and a GitHub-style 52-week activity heatmap. Prints the file path and never opens a browser.
+- Layer entries in `brainkeeper.yaml` accept optional `status_field` and `statuses` keys (consumed by the projects layer for the project-status breakdown).
+
+### Notes
+- Empty and sparse vaults produce valid, structurally complete output with zeroed values on every surface; a missing vault gives the same init-suggesting error as the rest of the CLI.
+
 ## [brainkeeper-v0.3.0] - 2026-07-06
 
 > ⚠️ **Breaking release.** The vault location changes: it is now fixed at `~/.brainkeeper/vault`, deliberately not configurable. Existing vaults must be moved into place and `--vault` flags removed (see Migration below).
@@ -149,6 +162,7 @@ First public release of the `brainkeeper` Python package. Implements spec v0.1.4
 - Archive semantics narrowed to completed projects only; retired Areas are deleted or distilled into Brain, not archived.
 - Domain tags: cardinality relaxed to 0..n (optional but recommended); vocabulary derived from folders under `projects/` and `areas/` rather than an enumerated list in the config.
 
+[brainkeeper-v0.4.0]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.4.0
 [brainkeeper-v0.3.0]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.3.0
 [brainkeeper-v0.2.2]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.2
 [brainkeeper-v0.2.1]: https://github.com/dasirra/brainkeeper/releases/tag/brainkeeper-v0.2.1
