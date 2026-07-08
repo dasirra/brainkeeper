@@ -11,7 +11,7 @@ byte-identical output on the same day.
 from __future__ import annotations
 
 import html
-from datetime import date
+from datetime import date, timedelta
 
 from ..core.stats import LAYER_KEYS, LAYER_LABELS, VaultStats, inbox_state
 
@@ -220,24 +220,33 @@ def _growth_section(stats: VaultStats) -> str:  # T2
         layer: [(date.fromisoformat(d), v) for d, v in stats.growth_by_layer[layer]]
         for layer in populated
     }
-    union_dates = sorted({d for points in parsed.values() for d, _ in points})
-    min_date, max_date = union_dates[0], union_dates[-1]
-    span_days = (max_date - min_date).days
+    # x domain: from the first data point through the end of the daily window
+    # (today), one point per calendar day
+    min_date = min(points[0][0] for points in parsed.values())
+    end_date = max(points[-1][0] for points in parsed.values())
+    if stats.daily_created:
+        last_daily = date.fromisoformat(next(reversed(stats.daily_created)))
+        end_date = max(end_date, last_daily)
+    span_days = (end_date - min_date).days
+    domain = [min_date + timedelta(days=i) for i in range(span_days + 1)]
     cum_max = max(parsed[layer][-1][1] for layer in populated)
 
-    # per-day created counts per layer: diffs of the cumulative series
+    # dense per-day series per layer, starting at the layer's own first note:
+    # cumulative carries forward, daily is the created count that day
     day_at: dict[str, dict[date, int]] = {}
     cum_at: dict[str, dict[date, int]] = {}
+    first_at: dict[str, date] = {}
     for layer in populated:
+        events = dict(parsed[layer])
+        first_at[layer] = parsed[layer][0][0]
         prev = 0
         day_at[layer] = {}
-        events = dict(parsed[layer])
         for d, v in parsed[layer]:
             day_at[layer][d] = v - prev
             prev = v
         running = 0
         cum_at[layer] = {}
-        for d in union_dates:
+        for d in domain:
             running = events.get(d, running)
             cum_at[layer][d] = running
     day_max = max(max(day_at[layer].values()) for layer in populated)
@@ -258,33 +267,34 @@ def _growth_section(stats: VaultStats) -> str:  # T2
                 f'y="{y_of(tick, maxval) + 3:.1f}">{tick}</text>'
             )
         for layer in populated:
+            days = [d for d in domain if d >= first_at[layer]]
             if group_id == "growth-cum":
-                pts = [(x_of(d), y_of(v, maxval)) for d, v in parsed[layer]]
+                pts = [(x_of(d), y_of(cum_at[layer][d], maxval)) for d in days]
             else:
-                pts = [
-                    (x_of(d), y_of(day_at[layer].get(d, 0), maxval))
-                    for d in union_dates
-                ]
+                pts = [(x_of(d), y_of(day_at[layer].get(d, 0), maxval)) for d in days]
             poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
             parts.append(f'<polyline class="line-{layer}" points="{poly}"/>')
-            dot_pts = (
-                pts
-                if group_id == "growth-cum"
-                else [(x_of(d), y_of(day_at[layer][d], maxval)) for d in day_at[layer]]
-            )
+            # dots only on days with created notes; every day has a line point
             parts.extend(
-                f'<circle class="dot-{layer}" cx="{x:.1f}" cy="{y:.1f}" r="1.5"/>'
-                for x, y in dot_pts
+                f'<circle class="dot-{layer}" cx="{x_of(d):.1f}" '
+                f'cy="{y_of(v if group_id == "growth-cum" else day_at[layer][d], maxval):.1f}" '
+                'r="1.5"/>'
+                for d, v in parsed[layer]
             )
         parts.append("</g>")
         return "".join(parts)
 
     # invisible per-day strips carrying the tooltip data for both modes
     strips = []
-    xs = [x_of(d) for d in union_dates]
-    for i, d in enumerate(union_dates):
-        left = _GROWTH_X0 if i == 0 else (xs[i - 1] + xs[i]) / 2
-        right = _GROWTH_X1 if i == len(xs) - 1 else (xs[i] + xs[i + 1]) / 2
+    half = (
+        (_GROWTH_X1 - _GROWTH_X0) / span_days / 2
+        if span_days
+        else (_GROWTH_X1 - _GROWTH_X0) / 2
+    )
+    for d in domain:
+        x = x_of(d)
+        left = max(x - half, _GROWTH_X0)
+        right = min(x + half, _GROWTH_X1)
         cum_rows = "|".join(
             f"{LAYER_LABELS[layer]}: {cum_at[layer][d]}" for layer in populated
         )
@@ -297,9 +307,9 @@ def _growth_section(stats: VaultStats) -> str:  # T2
             f'data-date="{d.isoformat()}" data-cum="{cum_rows}" data-day="{day_rows}"/>'
         )
 
-    x_ticks = sorted({min_date, union_dates[len(union_dates) // 2], max_date})
+    x_ticks = sorted({min_date, domain[len(domain) // 2], end_date})
     # anchor edge labels inward so they stay inside the viewBox
-    anchors = {min_date: "start", max_date: "end"}
+    anchors = {min_date: "start", end_date: "end"}
     x_labels = "".join(
         f'<text class="axis-label" text-anchor="{anchors.get(d, "middle")}" '
         f'x="{x_of(d):.1f}" y="{_GROWTH_Y1 + 18}">{d.isoformat()}</text>'

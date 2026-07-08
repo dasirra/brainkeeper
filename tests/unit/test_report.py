@@ -453,8 +453,9 @@ def test_growth_polyline_monotonic_and_matches_layer_total(
     ys = [y for _, y in points]
     assert all(a >= b for a, b in zip(ys, ys[1:]))  # y falls as cumulative rises
 
+    # one point per calendar day from the layer's first note through today
+    assert len(points) == 11
     brain_series = payload["series"]["growth_by_layer"]["brain"]
-    assert len(points) == len(brain_series)
     assert brain_series[-1][1] == payload["notes_per_layer"]["brain"]
 
 
