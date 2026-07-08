@@ -357,10 +357,13 @@ def _section(html_text: str, class_name: str) -> str:
     return match.group()
 
 
+# notes-per-layer is now a stacked bar + tabular legend; parse legend rows as
+# (label, count). Every layer gets a row even at zero (no segment, still a row).
 _LAYER_TILE_RE = re.compile(
-    r'<div class="tile accent-\w+">'
-    r'<div class="tile-value">(\d+)</div>'
-    r'<div class="tile-label">([^<]*)</div></div>'
+    r'<li><span class="seg-swatch seg-\w+"></span>'
+    r'<span class="stack-name">([^<]*)</span>'
+    r'<span class="stack-count">(\d+)</span>'
+    r'<span class="stack-pct">[\d.]+%</span></li>'
 )
 
 
@@ -478,9 +481,9 @@ def test_notes_per_layer_chart_has_six_rows(
     tiles = _LAYER_TILE_RE.findall(layer_block)
 
     assert len(tiles) == 6
-    labels = [label for _, label in tiles]
+    labels = [label for label, _ in tiles]
     assert labels == ["Inbox", "Journal", "Projects", "Areas", "Brain", "Archive"]
-    counts = {label: int(count) for count, label in tiles}
+    counts = {label: int(count) for label, count in tiles}
     assert counts == {
         "Inbox": 0,
         "Journal": 0,
@@ -564,7 +567,7 @@ def test_empty_vault_growth_and_bars_labeled_empty(tmp_path: Path, monkeypatch, 
     layer_block = _chart_after_heading(bars, "Notes per layer")
     tiles = _LAYER_TILE_RE.findall(layer_block)
     assert len(tiles) == 6
-    assert all(int(count) == 0 for count, _ in tiles)
+    assert all(int(count) == 0 for _, count in tiles)
 
 
 # --- C20: external-request scan still clean on a fully populated report ---------
@@ -835,7 +838,7 @@ def test_html_values_match_json_across_sections(
     bars = _section(text, "bars")
     layer_block = _chart_after_heading(bars, "Notes per layer")
     layer_rows = {
-        label: int(count) for count, label in _LAYER_TILE_RE.findall(layer_block)
+        label: int(count) for label, count in _LAYER_TILE_RE.findall(layer_block)
     }
     for key, count in payload["notes_per_layer"].items():
         assert layer_rows[LAYER_LABELS[key]] == count

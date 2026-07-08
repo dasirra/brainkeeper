@@ -16,105 +16,127 @@ from datetime import date, timedelta
 from ..core.stats import LAYER_KEYS, LAYER_LABELS, VaultStats, inbox_state
 
 _STYLE = """
+/* "Terminal dashboard" theme: dark-first, monospaced, bordered panels.
+   Light mode is a deliberate light-on-paper variant, not an auto flip. */
 :root {
-  --bg: #ffffff;
-  --fg: #1a1a1a;
-  --muted: #666666;
-  --tile-bg: #f2f2f2;
-  --warn-bg: #fff3e0;
-  --warn-fg: #b34700;
-  --line-inbox: #e63946;
-  --line-journal: #457b9d;
-  --line-projects: #2a9d8f;
-  --line-areas: #f4a261;
-  --line-brain: #6a4c93;
-  --line-archive: #8d99ae;
-  --bar-fill: #457b9d;
-  --heat-0: #ebedf0;
-  --heat-1: #c6e48b;
-  --heat-2: #7bc96f;
-  --heat-3: #239a3b;
-  --heat-4: #196127;
+  --fg: #161a17; --fg-2: #565d55; --muted: #7c8378; --bg: #f5f6f4; --panel: #ffffff;
+  --border: #d6dbd2; --grid: #e6e9e2; --accent: #1f8a3b;
+  --warn-bg: #fbeecf; --warn-fg: #8a5a10; --bar-fill: #1f8a3b;
+  --line-inbox: #e34948; --line-journal: #2a78d6; --line-projects: #1baf7a;
+  --line-areas: #eb6834; --line-brain: #4a3aa7; --line-archive: #6b7280;
+  --heat-0: #e6e9e2; --heat-1: #bfe3a3; --heat-2: #78c46b; --heat-3: #2f9d3c; --heat-4: #186226;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d1117;
-    --fg: #e6edf3;
-    --muted: #9aa4af;
-    --tile-bg: #161b22;
-    --warn-bg: #4d2600;
-    --warn-fg: #ffb877;
-    --line-inbox: #ff6b6b;
-    --line-journal: #6ea8d8;
-    --line-projects: #4fd1c5;
-    --line-areas: #f6b76b;
-    --line-brain: #b18cff;
-    --line-archive: #b6bfc9;
-    --bar-fill: #6ea8d8;
-    --heat-0: #161b22;
-    --heat-1: #0e4429;
-    --heat-2: #006d32;
-    --heat-3: #26a641;
-    --heat-4: #39d353;
+    --fg: #d7ddd4; --fg-2: #98a094; --muted: #6f766c; --bg: #0a0d0c; --panel: #10140f;
+    --border: #20261f; --grid: #181d17; --accent: #3fb950;
+    --warn-bg: #33280f; --warn-fg: #e3b657; --bar-fill: #3fb950;
+    --line-inbox: #e66767; --line-journal: #3987e5; --line-projects: #199e70;
+    --line-areas: #d95926; --line-brain: #9085e9; --line-archive: #9aa4b2;
+    --heat-0: #12160f; --heat-1: #0f3d22; --heat-2: #1a6b32; --heat-3: #2ea043; --heat-4: #48d364;
   }
 }
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; margin: 0; }
-main { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
-h1 { font-size: 1.4rem; }
-h2 { font-size: 1.05rem; margin-bottom: 0.5rem; }
-section { margin-top: 2rem; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-size: 14px;
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; }
+main { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+svg { max-width: 100%; height: auto; display: block; }
+h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; margin: 0; }
+h1::before { content: "> "; color: var(--accent); }
+main > h1 { border-bottom: 1px dashed var(--border); padding-bottom: 1.5rem; margin-bottom: 2.5rem; }
+h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.13em; color: var(--muted); margin: 0 0 0.95rem; }
+h2::before { content: "# "; color: var(--accent); opacity: 0.7; }
+h2:not(:first-of-type) { margin-top: 2.4rem; }
+section { margin-top: 1.5rem; border: 1px solid var(--border); border-radius: 2px;
+  padding: 1.35rem 1.55rem; background: var(--panel); }
+main > h1 + section { margin-top: 0; }
 .empty { color: var(--muted); font-style: italic; }
-.tiles { display: flex; gap: 1rem; flex-wrap: wrap; padding: 0; list-style: none; margin: 0; }
-.tile { background: var(--tile-bg); border-radius: 8px; padding: 1rem 1.5rem; min-width: 8rem; }
-.tile.warn { background: var(--warn-bg); color: var(--warn-fg); }
-.tile-value { font-size: 2rem; font-weight: 700; }
-.tile-label { font-size: 0.85rem; color: var(--muted); }
-.tile.warn .tile-label { color: var(--warn-fg); }
+/* top stat tiles: bordered cells, generous padding so numbers clear the panel edge */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0; list-style: none; margin: 0; padding: 0; }
+.tile { padding: 1.25rem 1.75rem; border-left: 2px solid var(--border); }
+.tile:first-child { border-left: none; }
+.tile-value { font-size: 2rem; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.tile-label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.11em;
+  color: var(--muted); margin-top: 0.5rem; }
+.tile.warn { background: var(--warn-bg); }
+.tile.warn .tile-value, .tile.warn .tile-label { color: var(--warn-fg); }
+/* growth */
+.growth { position: relative; }
+.growth-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.9rem; }
+.growth-header h2 { margin: 0; }
+.toggle-btn { font: inherit; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+  background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 2px;
+  padding: 0.3rem 0.7rem; cursor: pointer; }
+.toggle-btn::before { content: "["; margin-right: 0.35em; color: var(--muted); }
+.toggle-btn::after { content: "]"; margin-left: 0.35em; color: var(--muted); }
+.toggle-btn:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.axis { stroke: var(--border); stroke-width: 1; }
+.axis-label { fill: var(--muted); font-size: 0.7rem; font-family: inherit; }
 .line-inbox, .line-journal, .line-projects, .line-areas, .line-brain, .line-archive {
   fill: none;
   stroke-width: 2;
 }
-.line-inbox { stroke: var(--line-inbox); background-color: var(--line-inbox); }
-.line-journal { stroke: var(--line-journal); background-color: var(--line-journal); }
-.line-projects { stroke: var(--line-projects); background-color: var(--line-projects); }
-.line-areas { stroke: var(--line-areas); background-color: var(--line-areas); }
-.line-brain { stroke: var(--line-brain); background-color: var(--line-brain); }
-.line-archive { stroke: var(--line-archive); background-color: var(--line-archive); }
+.line-inbox { stroke: var(--line-inbox); }
+.line-journal { stroke: var(--line-journal); }
+.line-projects { stroke: var(--line-projects); }
+.line-areas { stroke: var(--line-areas); }
+.line-brain { stroke: var(--line-brain); }
+.line-archive { stroke: var(--line-archive); }
 .dot-inbox { fill: var(--line-inbox); }
 .dot-journal { fill: var(--line-journal); }
 .dot-projects { fill: var(--line-projects); }
 .dot-areas { fill: var(--line-areas); }
 .dot-brain { fill: var(--line-brain); }
 .dot-archive { fill: var(--line-archive); }
-.growth { position: relative; }
-.growth-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
-.toggle-btn { background: var(--tile-bg); color: var(--fg); border: 1px solid var(--muted); border-radius: 6px; padding: 0.3rem 0.8rem; font: inherit; font-size: 0.8rem; cursor: pointer; }
-.toggle-btn:hover { border-color: var(--fg); }
-.tooltip { position: absolute; background: var(--tile-bg); color: var(--fg); border: 1px solid var(--muted); border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.8rem; pointer-events: none; white-space: nowrap; z-index: 1; }
 .hover-strip { fill: transparent; }
-.hover-strip:hover { fill: var(--fg); fill-opacity: 0.05; }
+.hover-strip:hover { fill: var(--fg); fill-opacity: 0.06; }
 svg g[hidden] { display: none; }
-.axis { stroke: var(--muted); stroke-width: 1; }
-.axis-label { fill: var(--muted); font-size: 0.7rem; }
-.tile.accent-inbox { border-left: 4px solid var(--line-inbox); }
-.tile.accent-journal { border-left: 4px solid var(--line-journal); }
-.tile.accent-projects { border-left: 4px solid var(--line-projects); }
-.tile.accent-areas { border-left: 4px solid var(--line-areas); }
-.tile.accent-brain { border-left: 4px solid var(--line-brain); }
-.tile.accent-archive { border-left: 4px solid var(--line-archive); }
-.legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; font-size: 0.85rem; padding: 0; list-style: none; }
-.legend-item { display: flex; align-items: center; gap: 0.35rem; }
-.legend-swatch { width: 0.75rem; height: 0.75rem; border-radius: 2px; display: inline-block; }
-.bar { fill: var(--bar-fill); }
-.bar-label { fill: var(--fg); font-size: 0.8rem; }
-.bar-value { fill: var(--fg); font-size: 0.8rem; }
+.legend { display: flex; gap: 1.1rem; flex-wrap: wrap; list-style: none; margin: 0.9rem 0 0; padding: 0;
+  font-size: 0.74rem; color: var(--fg-2); }
+.legend-item { display: flex; align-items: center; gap: 0.4rem; }
+.legend-swatch { width: 0.65rem; height: 0.65rem; border-radius: 1px; display: inline-block; }
+.legend-swatch.line-inbox { background-color: var(--line-inbox); }
+.legend-swatch.line-journal { background-color: var(--line-journal); }
+.legend-swatch.line-projects { background-color: var(--line-projects); }
+.legend-swatch.line-areas { background-color: var(--line-areas); }
+.legend-swatch.line-brain { background-color: var(--line-brain); }
+.legend-swatch.line-archive { background-color: var(--line-archive); }
+.tooltip { position: absolute; background: var(--bg); color: var(--fg); border: 1px solid var(--accent);
+  border-radius: 2px; padding: 0.45rem 0.6rem; font-size: 0.72rem; line-height: 1.55;
+  pointer-events: none; white-space: nowrap; z-index: 2; box-shadow: 0 0 0 1px var(--border); }
+/* notes per layer: one stacked segmented bar + tabular legend */
+.stack { display: flex; width: 100%; height: 34px; gap: 2px; padding: 2px; background: var(--grid);
+  border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+.seg { flex-basis: 0; height: 100%; border-radius: 1px; min-width: 2px; }
+.seg-inbox { background: var(--line-inbox); }
+.seg-journal { background: var(--line-journal); }
+.seg-projects { background: var(--line-projects); }
+.seg-areas { background: var(--line-areas); }
+.seg-brain { background: var(--line-brain); }
+.seg-archive { background: var(--line-archive); }
+.stack-legend { list-style: none; margin: 0.95rem 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0 1.6rem; }
+.stack-legend li { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center;
+  gap: 0.6rem; padding: 0.32rem 0; border-bottom: 1px solid var(--grid); font-size: 0.8rem; }
+.seg-swatch { width: 0.6rem; height: 0.6rem; border-radius: 1px; display: inline-block; }
+.stack-name { color: var(--fg); }
+.stack-count { font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
+.stack-pct { font-variant-numeric: tabular-nums; color: var(--muted); text-align: right; min-width: 3.4rem; }
+/* top tags */
+.bar { fill: var(--bar-fill); rx: 1px; }
+.bar-label { fill: var(--fg-2); font-size: 0.8rem; font-family: inherit; }
+.bar-value { fill: var(--fg); font-size: 0.8rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; font-family: inherit; }
+/* heatmap */
+.heatmap rect { rx: 1px; ry: 1px; }
 .c0 { fill: var(--heat-0); }
 .c1 { fill: var(--heat-1); }
 .c2 { fill: var(--heat-2); }
 .c3 { fill: var(--heat-3); }
 .c4 { fill: var(--heat-4); }
-.hm-legend { fill: var(--muted); font-size: 0.7rem; }
+.hm-legend { fill: var(--muted); font-size: 0.7rem; font-family: inherit; }
 """.strip()
 
 
@@ -355,11 +377,33 @@ def _growth_section(stats: VaultStats) -> str:  # T2
 
 
 def _bars_section(stats: VaultStats) -> str:  # T2
-    layer_tiles = "".join(
-        f'<div class="tile accent-{layer}">'
-        f'<div class="tile-value">{stats.notes_per_layer[layer]}</div>'
-        f'<div class="tile-label">{html.escape(LAYER_LABELS[layer])}</div></div>'
+    # notes per layer as one stacked bar (share of total) + a tabular legend.
+    # zero-count layers contribute no segment but still get a legend row.
+    total = sum(stats.notes_per_layer.values())
+    segments = "".join(
+        f'<span class="seg seg-{layer}" style="flex-grow:{stats.notes_per_layer[layer]}"></span>'
         for layer in LAYER_KEYS
+        if stats.notes_per_layer[layer] > 0
+    )
+    if total:
+        stack = f'<div class="stack" role="img" aria-label="Notes per layer">{segments}</div>'
+    else:
+        stack = _empty_state("No notes yet")
+
+    def legend_row(layer: str) -> str:
+        count = stats.notes_per_layer[layer]
+        pct = (count / total * 100) if total else 0.0
+        return (
+            f'<li><span class="seg-swatch seg-{layer}"></span>'
+            f'<span class="stack-name">{html.escape(LAYER_LABELS[layer])}</span>'
+            f'<span class="stack-count">{count}</span>'
+            f'<span class="stack-pct">{pct:.1f}%</span></li>'
+        )
+
+    legend = (
+        '<ul class="stack-legend">'
+        + "".join(legend_row(layer) for layer in LAYER_KEYS)
+        + "</ul>"
     )
 
     if stats.top_tags:
@@ -369,7 +413,8 @@ def _bars_section(stats: VaultStats) -> str:  # T2
 
     return (
         '<section class="bars"><h2>Notes per layer</h2>'
-        + f'<div class="tiles">{layer_tiles}</div>'
+        + stack
+        + legend
         + "<h2>Top tags</h2>"
         + tag_chart
         + "</section>"
