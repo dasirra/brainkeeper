@@ -4,19 +4,19 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 import yaml
 
-from ..core.stats import INBOX_ROT_DAYS, LAYER_KEYS, VaultStats, compute_stats
-
-_LAYER_LABELS = {
-    "inbox": "Inbox",
-    "journal": "Journal",
-    "projects": "Projects",
-    "areas": "Areas",
-    "brain": "Brain",
-    "archive": "Archive",
-}
+from ..core.stats import (
+    INBOX_ROT_DAYS,
+    LAYER_KEYS,
+    LAYER_LABELS,
+    VaultStats,
+    compute_stats,
+    inbox_state,
+)
+from .report import render_report
 
 
 def run(args) -> int:
@@ -38,8 +38,20 @@ def run(args) -> int:
         )
         return 1
 
+    html_requested = args.html is not None
+    if html_requested:
+        path = Path(args.html)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(render_report(stats), encoding="utf-8")
+        except OSError as exc:
+            print(f"error: could not write report to {path!r} ({exc})", file=sys.stderr)
+            return 1
     if args.json:
         print(json.dumps(stats_json(stats), indent=2))
+    if html_requested:
+        print(str(path), file=sys.stderr if args.json else sys.stdout)
+    if args.json or html_requested:
         return 0
 
     lines = [
@@ -106,9 +118,10 @@ def _progress_lines(stats: VaultStats) -> list[str]:
 
 def _health_lines(stats: VaultStats) -> list[str]:
     age = stats.inbox_oldest_age_days
-    if age is None:
+    state = inbox_state(age)
+    if state == "empty":
         inbox = "OK (no inbox notes)"
-    elif age > INBOX_ROT_DAYS:
+    elif state == "rotting":
         inbox = f"WARN oldest {age}d (> {INBOX_ROT_DAYS}d)"
     else:
         inbox = f"OK (oldest {age}d)"
@@ -135,7 +148,7 @@ def _structure_lines(stats: VaultStats) -> list[str]:
         else "none yet"
     )
     layers = ", ".join(
-        f"{_LAYER_LABELS[key]} {stats.notes_per_layer[key]}" for key in LAYER_KEYS
+        f"{LAYER_LABELS[key]} {stats.notes_per_layer[key]}" for key in LAYER_KEYS
     )
     return [
         f"  Top tags: {tags}",
@@ -144,5 +157,5 @@ def _structure_lines(stats: VaultStats) -> list[str]:
 
 
 def _sparse_layer_counts(counts: dict[str, int]) -> str:
-    parts = [f"{_LAYER_LABELS[key]} {counts[key]}" for key in LAYER_KEYS if counts[key]]
+    parts = [f"{LAYER_LABELS[key]} {counts[key]}" for key in LAYER_KEYS if counts[key]]
     return ", ".join(parts) if parts else "none"
